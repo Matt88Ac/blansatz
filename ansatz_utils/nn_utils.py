@@ -1,4 +1,4 @@
-from typing import Optional, Union, Iterable
+from typing import Optional
 
 import torch
 from torch import autograd
@@ -44,8 +44,9 @@ def get_activation(activation: str, constant: Optional[float] = 0.01) -> nn.Modu
                               "'identity' or 'tanh'")
 
 
-class SelfDifferences(autograd.Function):
-    """ This class implements both a function that maps a tensor X to [X_j - X_i: 1 <= i < j <= len(X.T)] and it's gradient.
+class SelfDiff(autograd.Function):
+    """ This class implements both a function that maps a tensor X to [X_j - X_i: 1 <= i < j <= len(X.T)]
+        and it's gradient.
     """
 
     @staticmethod
@@ -95,66 +96,8 @@ class SelfDifferences(autograd.Function):
         return grad_input
 
 
-class MLP(nn.Module):
-    def __init__(self, in_dim: int, out_dim: int, hidden_layers: Optional[list[int]] = None,
-                 bias: Optional[Union[bool, Iterable[bool]]] = True,
-                 activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
-                 device=torch.device('cpu'), dtype=torch.float64):
-        """
-        Args:
-            in_dim (int):
-                Size of each input sample.
-            out_dim (int):
-                Size of each output sample.
-            hidden_layers (list[int], Optional):
-                
-            bias:
-            activation: (str, Optional):
-                Either one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', 'identity' or 'tanh'.
-                Default: 'leakyrelu'.
-            activation_constant: (float, Optional):
-                A tunable hyperparameter that some of the mentioned activation functions use. Neglected when irrelevant.
-                Default: 0.01.
-            device:
-            dtype:
-        """
-        super(MLP, self).__init__()
-        if hidden_layers is None:
-            hidden_layers = []
-
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.layer_dims = [in_dim] + hidden_layers + [out_dim]
-
-        if isinstance(bias, bool):
-            bias = [bias] * (len(self.layer_dims) - 1)
-        else:
-            bias = list(bias)
-            assert len(bias) == len(self.layer_dims) - 1
-
-        layers = [nn.Linear(self.layer_dims[0], self.layer_dims[1], bias=bias[0])]
-
-        for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[1:-1], self.layer_dims[2:])):
-            layers.append(get_activation(activation, activation_constant))
-            layers.append(nn.Linear(in_dim, out_dim, bias=bias[i + 1]))
-
-        self.layers = nn.Sequential(*layers).to(device=device, dtype=dtype)
-
-    def forward(self, x):
-        out = self.layers(x)
-        return out
-
-
 if __name__ == '__main__':
     pass
-    from torch.autograd import gradcheck
 
-    b, k, n = 10, 8, 13
-
-    A = torch.nn.Parameter(torch.tensor(5.0, dtype=torch.float64), requires_grad=False)
-    M = torch.nn.Parameter(torch.tensor(1.0, dtype=torch.float64))
-
-    temp = torch.rand(b, k, n, device='cpu', dtype=torch.float64, requires_grad=True) * 100 + 7
-
-    check = gradcheck(SMU.apply, (temp, M, A))
-    print(check)
+    # b, k, n = 10, 8, 13
+    # temp = torch.rand(b, k, n, device='cpu', dtype=torch.float64, requires_grad=True) * 100 + 7

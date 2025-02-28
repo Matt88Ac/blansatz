@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 from random import sample
 
 import torch
@@ -31,7 +31,7 @@ def permutation_sign(p: torch.Tensor) -> int:
     return sign
 
 
-def random_negative_permutation(dim: int, device: Optional[str, torch.device] = 'cpu') -> torch.Tensor:
+def random_negative_permutation(dim: int, device: Optional[Union[str, torch.device]] = 'cpu') -> torch.Tensor:
     """ The function generates a random negative-signed permutation of dimension 'dim'.
     Args:
         dim (int): The dimension of the permutation.
@@ -46,7 +46,7 @@ def random_negative_permutation(dim: int, device: Optional[str, torch.device] = 
     return permutation
 
 
-def random_transposition(dim: int, device: Optional[str, torch.device] = 'cpu') -> torch.Tensor:
+def random_transposition(dim: int, device: Optional[Union[str, torch.device]] = 'cpu') -> torch.Tensor:
     """ The function generates a random transposition of dimension 'dim'. Note that a transposition is
         a negative-signed permutation.
     Args:
