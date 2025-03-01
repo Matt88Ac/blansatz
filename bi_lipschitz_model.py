@@ -1,9 +1,9 @@
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch import nn
 
-from ansatz_utils import MLP, SelfDiff, random_negative_permutation
+from ansatz_utils import MLP, SelfDiff, random_negative_permutation, permutation_sign, vectorized_permutation_sign
 
 
 class BiLipschitzPsi(nn.Module):
@@ -42,6 +42,21 @@ class BiLipschitzPsi(nn.Module):
         ax = torch.einsum('md,...dn->...mn', self.spatial_projector, X)  # [a * x_1, ..., a * x_n]
         diff_ax = SelfDiff.apply(ax.clone())  # [ a * (x_j - x_i): 1 <= i < j <= n ]
         sort_ax, argsort_ax = torch.sort(ax, dim=-1)
+
+        S1 = torch.sign(diff_ax).prod(dim=-1, keepdim=False)
+        S2 = vectorized_permutation_sign(argsort_ax)[..., 0]
+
+        print((S2 == -1).float().mean().item(), (S1 == -1).float().mean().item())
+        exit(0)
+        for i in range(ax.shape[0]):
+            for j in range(ax.shape[1]):
+                S = permutation_sign(argsort_ax[i, j])
+                eq1 = (S == S1[i, j]).item()
+                eq2 = (S == S2[i, j]).item()
+                print(f'original: {eq1}, vectorized: {eq2}, {(S.item(), S1[i, j].item(), S2[i, j].item())}')
+        # dx = torch.diff(sort_ax, dim=-1).min(dim=-1, keepdim=True)[0]
+        exit(0)
+
         fx = torch.cat(
             [sort_ax, - torch.sign(diff_ax).prod(dim=-1, keepdim=True) * self.max_pool(-diff_ax.abs())], dim=-1
         )
@@ -53,7 +68,7 @@ class BiLipschitzPsi(nn.Module):
 
 class BiLipschitzAntiSymmetricModel(nn.Module):
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, psi_dim: Optional[int] = None,
-                 device=torch.device('cpu'), dtype=torch.float64, **mlp_kwargs):
+                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **mlp_kwargs):
         """
         Args:
             in_dim:
@@ -82,8 +97,8 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
 
 if __name__ == '__main__':
     b, d, n = 10, 3, 15
-    model = BiLipschitzAntiSymmetricModel(d, n, 4, hidden_layers=[5, 100, 3])
+    model = BiLipschitzAntiSymmetricModel(d, n, 4, hidden_layers=[5, 100, 3], device='cuda')
 
-    temp = torch.rand(b, d, n, dtype=torch.float64)*1000
+    temp = torch.rand(b, d, n, dtype=torch.float64, device='cuda')*1000
 
     print(model(temp).shape)

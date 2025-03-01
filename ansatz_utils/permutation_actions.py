@@ -6,7 +6,7 @@ import torch
 PERMUTATION_STRATEGIES = Literal['augment_swap', 'augment_random', 'constant_swap', 'constant_random']
 
 
-def permutation_sign(p: torch.Tensor) -> int:
+def permutation_sign(p: torch.Tensor) -> torch.Tensor:
     """ The function computes the sign of a given permutation p.
 
     Args:
@@ -22,12 +22,13 @@ def permutation_sign(p: torch.Tensor) -> int:
         sign_p = permutation_sign(permutation);
     """
     dim = len(p)
-    count = 0
+    sign = torch.ones(1, device=p.device, dtype=torch.int)
+    identity = p.clone()
     for i in range(dim):
-        for j in range(i + 1, dim):
-            if p[i] > p[j]:
-                count += 1
-    sign = -2 * int(count % 2) + 1
+        if identity[i] != i:
+            sign *= -1
+            identity[identity[i]] = identity[i]
+            identity[i] = i
     return sign
 
 
@@ -61,3 +62,41 @@ def random_transposition(dim: int, device: Optional[Union[str, torch.device]] = 
     transposition = torch.tensor(list(indices), device=device, requires_grad=False)
     transposition[[x1, x2]] = transposition[[x2, x1]]
     return transposition
+
+
+def vectorized_permutation_sign(p: torch.Tensor) -> torch.Tensor:
+    """ The function computes the signs of a given tensor of permutations.
+
+    Args:
+        p (torch.Tensor):
+            A k-D tensor of arbitrary last-dimension n, that contains distinct Long/Int elements from {0, ..., n-1}.
+
+    Returns:
+            -1 if the number of inversions in p is odd, or 1 otherwise.
+
+    Example:
+        n = 10;
+        permutation = torch.randperm(n);
+        sign_p = permutation_sign(permutation);
+    """
+    *size, dim = p.shape
+    sign = torch.ones(size, device=p.device, dtype=torch.int32)
+    identity = p.clone()
+
+    for i in range(dim):
+        eq_perm = identity[..., i] == i
+
+        sign = torch.where(eq_perm, sign, -sign)
+        identity[..., identity[..., i].clone()] = torch.where(eq_perm, identity[..., identity[..., i].clone()], identity[..., i]).clone()
+        identity[..., i] = torch.where(eq_perm, identity[..., i], i).clone()
+
+
+    print(torch.all(identity.diff(dim=-1) == 1))
+    return sign.unsqueeze(-1)
+
+
+if __name__ == '__main__':
+    per = torch.stack([torch.randperm(10, device='cuda'), torch.randperm(10, device='cuda')], dim=-1).T
+
+    per = torch.stack([random_transposition(10, device='cuda'), random_transposition(10, device='cuda')], dim=-1).T
+    print(vectorized_permutation_sign(per))
