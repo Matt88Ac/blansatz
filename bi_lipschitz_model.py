@@ -35,7 +35,15 @@ class BiLipschitzPsi(nn.Module):
             >>> m = 2 * d * n + 1
             >>> psi = BiLipschitzPsi(d, n, m)
             >>> psi(X).shape[0], psi(X).shape[1]
-            (b, m)
+            (10, 31)
+            >>> positive_permutation = torch.tensor([1, 0, 2, 4, 3], dtype=torch.int)
+            >>> alt_X = X[..., positive_permutation]
+            >>> torch.all(psi(X) == psi(alt_X)).item()
+            True
+            >>> negative_permutation = random_negative_permutation(n)
+            >>> permuted_X = X[..., negative_permutation]
+            >>> torch.all(psi(X) == psi(permuted_X)).item()
+            False
         """
         super(BiLipschitzPsi, self).__init__()
 
