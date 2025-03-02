@@ -3,12 +3,13 @@ from typing import Optional, Union
 import torch
 from torch import nn
 
-from ansatz_utils import MLP, SelfDiff, random_negative_permutation, permutation_sign, vectorized_permutation_sign
+from ansatz_utils import MLP, SelfDiff, random_negative_permutation  # , permutation_sign, vectorized_permutation_sign
 
 
 class BiLipschitzPsi(nn.Module):
-    """
-
+    """ The class constructs a layer of Alternation-Invariant functions of the form ψ(X; a, b) = [sort(X*a), Q(X*a)]*b
+        where Q(x*a) = prod{sign(a*(x_j - x_i)): i < j} *  min{a*(x_j - x_i): i < j}.
+        
     """
     def __init__(self, in_dim: int, in_channels: int, out_dim: int):
         """
@@ -37,7 +38,7 @@ class BiLipschitzPsi(nn.Module):
             X: input batch of tensors y = [x_1, ..., x_n]; such that x_i is a real [..., d] tensor.
 
         Returns:
-            Psi(x; a, b) as described in the paper.
+            Ψ(X; A, B) as described above.
         """
         ax = torch.einsum('md,...dn->...mn', self.spatial_projector, X)  # [a * x_1, ..., a * x_n]
         diff_ax = SelfDiff.apply(ax.clone())  # [ a * (x_j - x_i): 1 <= i < j <= n ]
