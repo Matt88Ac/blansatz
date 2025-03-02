@@ -42,26 +42,12 @@ class BiLipschitzPsi(nn.Module):
         ax = torch.einsum('md,...dn->...mn', self.spatial_projector, X)  # [a * x_1, ..., a * x_n]
         diff_ax = SelfDiff.apply(ax.clone())  # [ a * (x_j - x_i): 1 <= i < j <= n ]
         sort_ax, argsort_ax = torch.sort(ax, dim=-1)
-
-        S1 = torch.sign(diff_ax).prod(dim=-1, keepdim=False)
-        S2 = vectorized_permutation_sign(argsort_ax)[..., 0]
-
-        print((S2 == -1).float().mean().item(), (S1 == -1).float().mean().item())
-        exit(0)
-        for i in range(ax.shape[0]):
-            for j in range(ax.shape[1]):
-                S = permutation_sign(argsort_ax[i, j])
-                eq1 = (S == S1[i, j]).item()
-                eq2 = (S == S2[i, j]).item()
-                print(f'original: {eq1}, vectorized: {eq2}, {(S.item(), S1[i, j].item(), S2[i, j].item())}')
-        # dx = torch.diff(sort_ax, dim=-1).min(dim=-1, keepdim=True)[0]
-        exit(0)
-
         fx = torch.cat(
             [sort_ax, - torch.sign(diff_ax).prod(dim=-1, keepdim=True) * self.max_pool(-diff_ax.abs())], dim=-1
         )
         # The above line computes [sort(x_1 * a_l, ..., x_n * a_l), prod(sign(a * (x_j - x_i)) * min{|a * (x_j - x_i)|}]
-        # for all 1 <= l <= m, that is F(x; a_l)
+        # for all 1 <= l <= m, that is F(x; a_l).
+        # Todo: Implement the computation using the sign of the argsort. Currently unavailable due to complexities in batched computations.
         psi = torch.einsum('...mn,mn->...m', fx, self.channel_projector)  # b_l * F(x; a_l) for all 1 <= l <= m
         return psi
 
@@ -97,8 +83,8 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
 
 if __name__ == '__main__':
     b, d, n = 10, 3, 15
-    model = BiLipschitzAntiSymmetricModel(d, n, 4, hidden_layers=[5, 100, 3], device='cuda')
+    model = BiLipschitzAntiSymmetricModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu')
 
-    temp = torch.rand(b, d, n, dtype=torch.float64, device='cuda')*1000
+    temp = torch.rand(b, d, n, dtype=torch.float64, device='cpu')*1000
 
     print(model(temp).shape)
