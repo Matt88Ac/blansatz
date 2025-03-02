@@ -13,18 +13,29 @@ class BiLipschitzPsi(nn.Module):
 
         Attributes:
             spatial_projector (Parameter):
-                Size of each input sample.
+                a matrix of m d-dimensional parameters.
             channel_projector (Parameter):
-                Size of each output sample.
+                a matrix of m (n+1)-dimensional parameters.
             max_pool:
                 torch AdaptiveMaxPool1d.
     """
     def __init__(self, in_dim: int, in_channels: int, out_dim: int):
         """
         Args:
-            in_dim:
-            in_channels:
-            out_dim:
+            in_dim (int):
+                spatial dimension (denoted above by d).
+            in_channels (int):
+                 number of particles in a system (denoted above by n).
+            out_dim (int):
+                number of functions ψ to define (denoted above by m).
+
+        Examples:
+            >>> b, d, n = 10, 3, 5
+            >>> X = torch.randn(b, d, n)
+            >>> m = 2 * d * n + 1
+            >>> psi = BiLipschitzPsi(d, n, m)
+            >>> psi(X).shape[0], psi(X).shape[1]
+            (b, m)
         """
         super(BiLipschitzPsi, self).__init__()
 
