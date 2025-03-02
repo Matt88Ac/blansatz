@@ -90,8 +90,6 @@ def vectorized_permutation_sign(p: torch.Tensor) -> torch.Tensor:
         identity[..., identity[..., i].clone()] = torch.where(eq_perm, identity[..., identity[..., i].clone()], identity[..., i]).clone()
         identity[..., i] = torch.where(eq_perm, identity[..., i], i).clone()
 
-
-    print(torch.all(identity.diff(dim=-1) == 1))
     return sign.unsqueeze(-1)
 
 
