@@ -7,9 +7,17 @@ from ansatz_utils import MLP, SelfDiff, random_negative_permutation  # , permuta
 
 
 class BiLipschitzPsi(nn.Module):
-    """ The class constructs a layer of Alternation-Invariant functions of the form ψ(X; a, b) = [sort(X*a), Q(X*a)]*b
-        where Q(x*a) = prod{sign(a*(x_j - x_i)): i < j} *  min{a*(x_j - x_i): i < j}.
-        
+    """ The class constructs a layer of Alternation-Invariant functions of the form ψ(X; a, b) = [sort(a*X), Q(a*X)]*b
+        where Q(X*a) = prod{sign(a*(X_j - X_i)): i < j} *  min{a*(X_j - X_i): i < j}.
+        The input is (batched) d x n matrices, and the output is (a batch of) m scalars.
+
+        Attributes:
+            spatial_projector (Parameter):
+                Size of each input sample.
+            channel_projector (Parameter):
+                Size of each output sample.
+            max_pool:
+                torch AdaptiveMaxPool1d.
     """
     def __init__(self, in_dim: int, in_channels: int, out_dim: int):
         """
@@ -19,8 +27,6 @@ class BiLipschitzPsi(nn.Module):
             out_dim:
         """
         super(BiLipschitzPsi, self).__init__()
-        if out_dim is None:
-            out_dim = 2 * in_dim * in_channels + 1
 
         self.spatial_projector = nn.Parameter(torch.empty(out_dim, in_dim))
         self.max_pool = nn.AdaptiveMaxPool1d(1)
