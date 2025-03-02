@@ -47,6 +47,21 @@ def random_negative_permutation(dim: int, device: Optional[Union[str, torch.devi
     return permutation
 
 
+def random_positive_permutation(dim: int, device: Optional[Union[str, torch.device]] = 'cpu') -> torch.Tensor:
+    """ The function generates a random positive-signed permutation of dimension 'dim'.
+    Args:
+        dim (int): The dimension of the permutation.
+        device (str, torch.device, Optional): The device. Default: 'cpu'.
+
+    Returns:
+        Random negative-signed permutation element.
+    """
+    permutation = torch.randperm(dim, device=device)
+    while permutation_sign(permutation) == -1:
+        permutation = torch.randperm(dim, device=device)
+    return permutation
+
+
 def random_transposition(dim: int, device: Optional[Union[str, torch.device]] = 'cpu') -> torch.Tensor:
     """ The function generates a random transposition of dimension 'dim'. Note that a transposition is
         a negative-signed permutation.
