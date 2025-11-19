@@ -1,13 +1,12 @@
-from typing import Literal, Optional, Union
 from random import sample
+from typing import Optional, Union
 
 import torch
 
-PERMUTATION_STRATEGIES = Literal['augment_swap', 'augment_random', 'constant_swap', 'constant_random']
 
-
+@torch.jit.script
 def permutation_sign(p: torch.Tensor) -> torch.Tensor:
-    """ The function computes the sign of a given permutation p.
+    """ The function computes the sign of a given permutation p in O(n) time complexity.
 
     Args:
         p (torch.Tensor):
@@ -22,14 +21,28 @@ def permutation_sign(p: torch.Tensor) -> torch.Tensor:
         sign_p = permutation_sign(permutation);
     """
     dim = len(p)
-    sign = torch.ones(1, device=p.device, dtype=torch.int)
-    identity = p.clone()
+    count = torch.zeros(1, device=p.device, dtype=torch.int)
+    visited = torch.zeros(dim, device=p.device, dtype=torch.bool)
+    true_tensor = torch.ones(1, device=p.device, dtype=torch.int)
+    OPS = 0
     for i in range(dim):
-        if identity[i] != i:
-            sign *= -1
-            identity[identity[i]] = identity[i]
-            identity[i] = i
+        if not visited[i]:
+            count += 1
+            k = i
+            while not visited[k]:
+                visited = visited.select_scatter(true_tensor.clone()[0], 0, k)
+                k = p[k].clone()
+                OPS += 1
+    sign = - 2 * ((dim - count) % 2) + 1
     return sign
+
+
+def all_transpositions(n: int, device: Optional[Union[str, torch.device]] = 'cpu') -> torch.Tensor:
+    indices = [list(range(n))] * (n - 1)
+    indices = torch.tensor(indices, dtype=torch.int64, device=device)
+    for j in range(n - 1):
+        indices[j, [j + 1, j]] = indices[j, [j, j + 1]]
+    return indices
 
 
 def random_negative_permutation(dim: int, device: Optional[Union[str, torch.device]] = 'cpu') -> torch.Tensor:
@@ -79,7 +92,8 @@ def random_transposition(dim: int, device: Optional[Union[str, torch.device]] = 
     return transposition
 
 
-def vectorized_permutation_sign(p: torch.Tensor) -> torch.Tensor:
+@torch.jit.script
+def vmap_permutation_sign(p: torch.Tensor) -> torch.Tensor:
     """ The function computes the signs of a given tensor of permutations.
 
     Args:
@@ -94,22 +108,29 @@ def vectorized_permutation_sign(p: torch.Tensor) -> torch.Tensor:
         permutation = torch.randperm(n);
         sign_p = permutation_sign(permutation);
     """
-    *size, dim = p.shape
-    sign = torch.ones(size, device=p.device, dtype=torch.int32)
-    identity = p.clone()
+    signs = torch.stack([
+        permutation_sign(p_i) for p_i in torch.unbind(p, dim=0)
+    ], dim=0)
+    return signs
 
-    for i in range(dim):
-        eq_perm = identity[..., i] == i
 
-        sign = torch.where(eq_perm, sign, -sign)
-        identity[..., identity[..., i].clone()] = torch.where(eq_perm, identity[..., identity[..., i].clone()], identity[..., i]).clone()
-        identity[..., i] = torch.where(eq_perm, identity[..., i], i).clone()
-
-    return sign.unsqueeze(-1)
+def vectorized_permutation_sign(p: torch.Tensor) -> torch.Tensor:
+    shape = p.shape
+    if len(shape) == 1:
+        return permutation_sign(p)
+    signs = vmap_permutation_sign(p.reshape(-1, shape[-1])).reshape(shape[:-1])
+    return signs
 
 
 if __name__ == '__main__':
-    per = torch.stack([torch.randperm(10, device='cuda'), torch.randperm(10, device='cuda')], dim=-1).T
+    N_tests = 1000
+    D = 100
+    perms = torch.vstack([torch.randperm(D) for j in range(N_tests)])
+    S = vectorized_permutation_sign(perms)
 
-    per = torch.stack([random_transposition(10, device='cuda'), random_transposition(10, device='cuda')], dim=-1).T
-    print(vectorized_permutation_sign(per))
+    ID_MAT = torch.eye(D)
+    for j in range(N_tests):
+        s1 = ID_MAT[perms[j]].det()
+        s2 = S[j]
+        if s2 != s1:
+            print(s1, s2)
