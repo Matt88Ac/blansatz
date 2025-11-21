@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from .permutation_actions import vectorized_permutation_sign
+from permutation_actions import vectorized_permutation_sign
 
 
 def alternation_separation(sorted_x: Tensor) -> Tensor:
@@ -118,23 +118,6 @@ class AnInvariantEmbedding(nn.Module):
         return torch.einsum('...mn,mn->...m', projected_x, self.channel_projection)
 
 
-class AsFrameWeights(nn.Module):
-    def __init__(self, in_dim: int, n_frames: int):
-        super(AsFrameWeights, self).__init__()
-        self.projection_sorting = ProjectiveSorting(in_dim, n_frames)
-
-    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
-        projected_x, signs, sorted_x = self.projection_sorting(x)
-
-        weights = alternation_separation(projected_x)
-        s_weights = weights.clone().sum(dim=1, keepdim=True)
-        s_weights = torch.where(s_weights > 0, 1 / s_weights, s_weights)
-
-        return signs * s_weights * weights, sorted_x
-
-    @property
-    def weights(self):
-        return self.projection_sorting.weights
 
 
 if __name__ == '__main__':
@@ -142,15 +125,6 @@ if __name__ == '__main__':
 
     b, n, d = 4, 10, 3
     X = torch.rand(b, d, n)
-
-    _x1 = X[1, :, 1]
-
-    X[1, :, 6] = _x1
-
-    fw = AsFrameWeights(d, 120)
-    w, _x = fw(X)
-    print(w.abs().sum(dim=1))
-    exit(0)
 
     p_l = AnInvariantEmbedding(d, n, 120)
 
