@@ -8,7 +8,27 @@ from permutation_actions import vectorized_permutation_sign
 
 
 def alternation_separation(sorted_x: Tensor) -> Tensor:
+    """
+    Args:
+        sorted_x (torch.Tensor): A torch tensor such that i<j => x_i <= x_j along the last axis.
+
+    Returns:
+        min{(x_j - x_i): i < j} along the last axis of the input.
+    """
+
     return torch.diff(sorted_x, dim=-1).min(dim=-1, keepdim=True)[0]
+
+
+def weight_by_alternation_separation(x: Tensor) -> Tensor:
+    """
+
+    Args:
+        x:
+
+    Returns:
+
+    """
+    return x * alternation_separation(torch.sort(x, dim=-1, stable=True)[0])
 
 
 class ProjectiveSorting(nn.Module):
@@ -116,8 +136,6 @@ class AnInvariantEmbedding(nn.Module):
         del sorted_x
         projected_x = torch.cat([projected_x, signs * alternation_separation(projected_x)], dim=-1)
         return torch.einsum('...mn,mn->...m', projected_x, self.channel_projection)
-
-
 
 
 if __name__ == '__main__':
