@@ -6,8 +6,7 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from permutation_actions import all_transpositions
-from projective_layers import ProjectiveSorting, alternation_separation
+from ansatz_utils import all_transpositions, ProjectiveSorting, alternation_separation, prod_all_but_one
 
 
 class AsWeightedFrame(nn.Module):
@@ -71,18 +70,50 @@ class NonLinearWeightedFrame(WeakStabilizeWeightedFrame):
         return stable_func.sum(dim=-3)
 
 
+class LinearWeightedFrame(WeakStabilizeWeightedFrame):
+    def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
+                 p_norm: Union[str, int] = 'fro',
+                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
+        super(LinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, device, dtype)
+        self.p_norm = p_norm
+
+    def stable_forward(self, sorted_x: Tensor) -> Tensor:
+        sorted_x = sorted_x.unsqueeze(-3)
+
+        weight_hat = torch.norm(
+            sorted_x - torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1),
+            dim=[-2, -1], p=self.p_norm
+        )
+        pabo = prod_all_but_one(weight_hat)
+        weight_hat = 0.5 * pabo / (weight_hat.prod(-1, True) + pabo.clone().sum(-3, True))
+        weight_hat = weight_hat.unsqueeze(-1)
+
+        f_x: Tensor = self.unstable_function(sorted_x)
+        f_tx: Tensor = self.unstable_function(
+            torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1)
+        ).clone()
+
+        s1 = f_x*weight_hat
+        print(s1[0].sum(dim=1))
+        exit(0)
+
+        stable_func = f_x.squeeze(-2) - (s1).sum(dim=-2) - (weight_hat * f_tx).sum(dim=-2)
+        print((f_x*weight_hat).sum(dim=-2)[0])
+        # print(f_x.squeeze(-2)[0])
+        exit(0)
+        return stable_func
+
+
 if __name__ == '__main__':
-    transp = all_transpositions(6)
-    b, d, n = 10, 3, 6
-    temp = torch.rand(b, d, n, device='cpu') * 1000
+    from neural_networks import MLP
+    b, d, n = 10, 3, 13
+    F = nn.Sequential(nn.Flatten(-2, -1), MLP(n*d, 1, [20, 20, 20]))
+    X = torch.rand(b, d, n, dtype=torch.float64)
 
-    emb = ProjectiveSorting(d, 120)
+    X[0, :, 0] = X[0, :, 3]
 
-    w, ws, sx = emb(temp)
-    sx = sx.unsqueeze(-3)
-    transp = transp.unsqueeze(0).unsqueeze(0).unsqueeze(-2)
-    nsx = torch.take_along_dim(sx, transp, -1)
-    print(sx.shape, transp.shape, alternation_separation(w).shape)
+    SF = LinearWeightedFrame(F, d, n, 130)
 
-    print(nsx[0, 0, 1, 0])
-    print(sx[0, 0, 0, 0])
+    print(SF(X))
+
+
