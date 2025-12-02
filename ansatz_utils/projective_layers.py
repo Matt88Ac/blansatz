@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from permutation_actions import vectorized_permutation_sign
+from ansatz_utils import vectorized_permutation_sign
 
 
 def alternation_separation(sorted_x: Tensor) -> Tensor:
