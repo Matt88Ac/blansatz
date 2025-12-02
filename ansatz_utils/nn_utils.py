@@ -44,12 +44,13 @@ def get_activation(activation: str, constant: Optional[float] = 0.01) -> nn.Modu
                               "'identity' or 'tanh'")
 
 
-class SelfDiff(autograd.Function):
+class AllDifferences(autograd.Function):
     """ This class implements both a function that maps a tensor X to [X_j - X_i: 1 <= i < j <= len(X.T)]
         and it's gradient.
     """
 
     @staticmethod
+    @torch.jit.export
     def forward(ctx, inp: torch.Tensor) -> torch.Tensor:
         """
         Args:
@@ -73,6 +74,7 @@ class SelfDiff(autograd.Function):
         return torch.cat(differences, dim=-1)
 
     @staticmethod
+    @torch.jit.export
     def backward(ctx, grad_output):
         X, = ctx.saved_tensors
         n = ctx.n
@@ -96,6 +98,7 @@ class SelfDiff(autograd.Function):
         return grad_input
 
 
+@torch.jit.script
 def vandermonde_determinant(X: torch.Tensor) -> torch.Tensor:
     """
     Args:
@@ -105,11 +108,20 @@ def vandermonde_determinant(X: torch.Tensor) -> torch.Tensor:
     Returns:
         The Vandermonde Determinant of X along the last axis.
     """
-    return SelfDiff.apply(X).prod(dim=-1, keepdims=True)
+    return AllDifferences.apply(X).prod(-1, True)
+
+
+def uniform_sphere_point(n_samples: int, dim: int) -> torch.Tensor:
+    samples = torch.randn(n_samples, dim)
+    return samples / torch.norm(samples, dim=-1, keepdim=True)
+
+
+
 
 
 if __name__ == '__main__':
-    pass
+    s = uniform_sphere_point(100, 3)
+    print(s @ s.T)
 
     # b, k, n = 10, 8, 13
     # temp = torch.rand(b, k, n, device='cpu', dtype=torch.float64, requires_grad=True) * 100 + 7
