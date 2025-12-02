@@ -116,12 +116,44 @@ def uniform_sphere_point(n_samples: int, dim: int) -> torch.Tensor:
     return samples / torch.norm(samples, dim=-1, keepdim=True)
 
 
+@torch.jit.script
+def prod_all_but_one(X: torch.Tensor) -> torch.Tensor:
+    return torch.cat([X[..., :i].prod(-1, True) * X[..., i + 1:].prod(-1, True) for i in range(X.size(-1))], -1)
 
+
+def kk(X: torch.Tensor, offset=1, scale=0.5) -> torch.Tensor:
+    pabo = prod_all_but_one(X)
+    scales = torch.full_like(X, scale, requires_grad=True, device=X.device, dtype=X.dtype,
+                             pin_memory=X.is_pinned(X.device), layout=X.layout)
+    out = scales * pabo / (offset * X.prod(-1, True) + pabo.clone().sum(-1, True))
+    return out
 
 
 if __name__ == '__main__':
-    s = uniform_sphere_point(100, 3)
-    print(s @ s.T)
+    import numpy as np
+    from permutation_actions import all_transpositions
+
+
+    def make_transpositions(_x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        *size, d, n = _x.shape
+        at = all_transpositions(_x.shape[-2], _x.device).unsqueeze(0).unsqueeze(-1)
+        for i in range(len(size) - 1):
+            at = at.unsqueeze(2)
+
+        shaped_input = _x.clone().unsqueeze(1)
+        trans_input = torch.take_along_dim(shaped_input, at, -2)
+        # print(shaped_input.shape, trans_input.shape, _x.shape)
+        return shaped_input, trans_input
+
+
+    x = torch.rand(1, 5, 30)
+    x[:, :, 3] = x[:, :, 2]
+
+    xs, xt = make_transpositions(x.transpose(-2, -1))
+
+    xx = (xs - xt).norm(dim=(-2, -1))
+
+    print(kk(xx))
 
     # b, k, n = 10, 8, 13
     # temp = torch.rand(b, k, n, device='cpu', dtype=torch.float64, requires_grad=True) * 100 + 7
