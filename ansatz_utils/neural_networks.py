@@ -2,7 +2,7 @@ from typing import Optional, Union, Iterable
 
 import torch
 from torch import nn
-from .nn_utils import get_activation
+from ansatz_utils import get_activation
 
 
 class DeepSet(nn.Module):
