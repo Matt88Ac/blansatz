@@ -37,17 +37,17 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
                 if model_kwargs['biases']:
                     model_kwargs['biases'] = 'all_but_last'
         self.tau = random_negative_permutation(in_channels, device)
-        self.psi = AnInvariantEmbedding(in_dim, in_channels, embedding_dim).to(device=device, dtype=dtype)
+        self.mu = AnInvariantEmbedding(in_dim, in_channels, embedding_dim).to(device=device, dtype=dtype)
         self.model = get_model(model_name, **model_kwargs)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return (self.model(self.psi(x)) - self.model(self.psi(x[..., self.tau]))) / 2
+        return (self.model(self.mu(x)) - self.model(self.mu(x[..., self.tau]))) / 2
 
 
 if __name__ == '__main__':
     b, d, n = 10, 3, 15
     model = BiLipschitzAntiSymmetricModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', model_name='ds',
-                                          aggregation='avg')
+                                          aggregation='max')
 
     temp = torch.rand(b, d, n, dtype=torch.float64, device='cpu')*1000
 
