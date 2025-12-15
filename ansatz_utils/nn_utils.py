@@ -69,7 +69,7 @@ def vandermonde_determinant(X: torch.Tensor) -> torch.Tensor:
     return AllDifferences.apply(X).prod(-1, True)
 
 
-def uniform_sphere_point(n_samples: int, dim: int) -> torch.Tensor:
+def uniform_sphere_sampling(n_samples: int, dim: int) -> torch.Tensor:
     samples = torch.randn(n_samples, dim)
     return samples / torch.norm(samples, dim=-1, keepdim=True)
 
