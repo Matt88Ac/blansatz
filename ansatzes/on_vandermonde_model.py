@@ -3,7 +3,7 @@ from typing import Optional
 import torch
 from torch import nn
 
-from ansatz_utils import get_model, vandermonde_determinant, uniform_sphere_point
+from ansatz_utils import get_model, vandermonde_determinant, uniform_sphere_sampling
 
 
 class OnVandermondeModel(nn.Module):
