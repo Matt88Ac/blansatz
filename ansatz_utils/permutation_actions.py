@@ -24,7 +24,6 @@ def permutation_sign(p: torch.Tensor) -> torch.Tensor:
     count = torch.zeros(1, device=p.device, dtype=torch.int)
     visited = torch.zeros(dim, device=p.device, dtype=torch.bool)
     true_tensor = torch.ones(1, device=p.device, dtype=torch.int)
-    OPS = 0
     for i in range(dim):
         if not visited[i]:
             count += 1
@@ -32,7 +31,6 @@ def permutation_sign(p: torch.Tensor) -> torch.Tensor:
             while not visited[k]:
                 visited = visited.select_scatter(true_tensor.clone()[0], 0, k)
                 k = p[k].clone()
-                OPS += 1
     sign = - 2 * ((dim - count) % 2) + 1
     return sign
 

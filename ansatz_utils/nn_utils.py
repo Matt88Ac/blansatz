@@ -1,47 +1,5 @@
-from typing import Optional
-
 import torch
 from torch import autograd
-from torch import nn
-
-
-def get_activation(activation: str, constant: Optional[float] = 0.01) -> nn.Module:
-    """ The function generates an instance of an activation function to the user's choice.
-    Args:
-        activation (str):
-            Either one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', 'identity' or 'tanh'.
-        constant (float, Optional):
-            A tunable hyperparameter that some of the mentioned activation functions use. Neglected when irrelevant.
-            Default: 0.01.
-
-    Returns:
-        Torch instance of the selected activation function.
-
-    Raises:
-        NotImplementedError: If none of the above is chosen.
-
-    """
-    if activation.lower() == 'identity':
-        return nn.Identity()
-    elif activation.lower() == 'leakyrelu':
-        return nn.LeakyReLU(negative_slope=constant)
-    elif activation.lower() == 'elu':
-        return nn.ELU(alpha=constant)
-    elif activation.lower() == 'relu':
-        return nn.ReLU()
-    elif activation.lower() == 'silu':
-        return nn.SiLU()
-    elif activation.lower() == 'sigmoid':
-        return nn.Sigmoid()
-    elif activation.lower() == 'softplus':
-        return nn.Softplus(beta=constant)
-    elif activation.lower() == 'mish':
-        return nn.Mish()
-    elif activation.lower() == 'tanh':
-        return nn.Tanh()
-
-    raise NotImplementedError("Select one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', "
-                              "'identity' or 'tanh'")
 
 
 class AllDifferences(autograd.Function):
@@ -118,10 +76,31 @@ def uniform_sphere_point(n_samples: int, dim: int) -> torch.Tensor:
 
 @torch.jit.script
 def prod_all_but_one(X: torch.Tensor) -> torch.Tensor:
+    """
+        Args:
+            X (torch.Tensor):
+                A real tensor X of shape [b, d_1, ..., d_k, n]
+
+        Returns (torch.Tensor):
+            A real tensor of shape [b, d_1, ..., d_k, n*(n-1)/2],
+            where on the last axis, at each element i, we have prod(X_j, for 1<=j!=i<=n).
+        """
     return torch.cat([X[..., :i].prod(-1, True) * X[..., i + 1:].prod(-1, True) for i in range(X.size(-1))], -1)
 
 
-def kk(X: torch.Tensor, offset=1, scale=0.5) -> torch.Tensor:
+def linear_wsop_sub_weights(X: torch.Tensor, offset=1, scale=0.5) -> torch.Tensor:
+    """
+        Args:
+            X (torch.Tensor):
+                A real tensor X of shape [b, d_1, ..., d_k, n]
+            offset (float):
+                A real number that offsets the sub-weights
+            scale (float):
+                A real number that scales the sub-weights
+        Returns (torch.Tensor):
+                A real tensor of shape [b, d_1, ..., d_k, n],
+                where on the last axis, at each element i, scale * x_i / (offset + sum(x_j, 1 <= j <= n))
+            """
     pabo = prod_all_but_one(X)
     scales = torch.full_like(X, scale, requires_grad=True, device=X.device, dtype=X.dtype,
                              pin_memory=X.is_pinned(X.device), layout=X.layout)
@@ -130,7 +109,6 @@ def kk(X: torch.Tensor, offset=1, scale=0.5) -> torch.Tensor:
 
 
 if __name__ == '__main__':
-    import numpy as np
     from permutation_actions import all_transpositions
 
 
@@ -153,7 +131,7 @@ if __name__ == '__main__':
 
     xx = (xs - xt).norm(dim=(-2, -1))
 
-    print(kk(xx))
+    print(linear_wsop_sub_weights(xx))
 
     # b, k, n = 10, 8, 13
     # temp = torch.rand(b, k, n, device='cpu', dtype=torch.float64, requires_grad=True) * 100 + 7

@@ -6,7 +6,7 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from ansatz_utils import all_transpositions, ProjectiveSorting, alternation_separation, prod_all_but_one
+from ansatz_utils import all_transpositions, ProjectiveSorting, alternation_separation, linear_wsop_sub_weights
 
 
 class AsWeightedFrame(nn.Module):
@@ -84,23 +84,13 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
             sorted_x - torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1),
             dim=[-2, -1], p=self.p_norm
         )
-        pabo = prod_all_but_one(weight_hat)
-        weight_hat = 0.5 * pabo / (weight_hat.prod(-1, True) + pabo.clone().sum(-3, True))
-        weight_hat = weight_hat.unsqueeze(-1)
+        weight_hat = linear_wsop_sub_weights(weight_hat).unsqueeze(-1)
 
         f_x: Tensor = self.unstable_function(sorted_x)
         f_tx: Tensor = self.unstable_function(
             torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1)
         ).clone()
-
-        s1 = f_x*weight_hat
-        print(s1[0].sum(dim=1))
-        exit(0)
-
-        stable_func = f_x.squeeze(-2) - (s1).sum(dim=-2) - (weight_hat * f_tx).sum(dim=-2)
-        print((f_x*weight_hat).sum(dim=-2)[0])
-        # print(f_x.squeeze(-2)[0])
-        exit(0)
+        stable_func = f_x.squeeze(-2) - (f_x*weight_hat).sum(dim=-2) - (weight_hat * f_tx).sum(dim=-2)
         return stable_func
 
 
