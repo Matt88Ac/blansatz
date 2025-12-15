@@ -7,6 +7,9 @@ from ansatz_utils import get_model, vandermonde_determinant, uniform_sphere_poin
 
 
 class OnVandermondeModel(nn.Module):
+    """
+        Implementation of the discontinuous ansatz from https://arxiv.org/html/2402.15167v2
+    """
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  trainable_weights: Optional[bool] = False,
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **model_kwargs):
