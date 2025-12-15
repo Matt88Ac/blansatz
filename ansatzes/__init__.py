@@ -1,1 +1,2 @@
 from bi_lipschitz_model import BiLipschitzAntiSymmetricModel
+from on_vandermonde_model import OnVandermondeModel
