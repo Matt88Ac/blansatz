@@ -3,22 +3,30 @@ from typing import Optional, Union, Iterable
 import torch
 from torch import nn
 from .activations import get_activation
+from .aggregations import get_aggregation
+from .mlp import MLP
 
 
-class MLP(nn.Module):
-    """ MLP class.
+class DeepSets(nn.Module):
+    """ DeepSets class, paper available at
+        https://proceedings.neurips.cc/paper_files/paper/2017/file/f22e4747da1aa27e363d86d40ff442fe-Paper.pdf
 
-        Attributes:
-            in_dim (int):
+         Attributes:
+            mlp (nn.Module):
                 Size of each input sample.
             out_dim (int):
                 Size of each output sample.
             layer_dims (list[int]):
                 Each input/output dimension.
-    """
+            swap_last_axes (bool):
+                Whether to swap between the last two axes, upon the forward pass. Default: True.
+     """
 
     def __init__(self, in_dim: int, out_dim: int, hidden_layers: Optional[list[int]] = None,
                  biases: Optional[Union[bool, Iterable[bool]]] = True,
+                 new_dim: Optional[bool] = False,
+                 swap_last_axes: Optional[bool] = True,
+                 aggregation: Optional[str] = None,
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
                  device=torch.device('cpu'), dtype=torch.float64):
         """
@@ -42,9 +50,9 @@ class MLP(nn.Module):
             dtype (str, torch.dtype, Optional): The dtype. Default: torch.float64.
 
         Examples:
-            >>> mlp = MLP(5, 7, [3, 10, 2], True)
-            >>> mlp
-            MLP(
+            >>> ds = DeepSets(5, 7, [3, 10, 2], True)
+            >>> ds
+            DeepSets(
               (layers): Sequential(
                 (0): Linear(in_features=5, out_features=3, bias=True)
                 (1): LeakyReLU(negative_slope=0.01)
@@ -56,34 +64,35 @@ class MLP(nn.Module):
               )
             )
         """
-        super(MLP, self).__init__()
-        if hidden_layers is None:
-            hidden_layers = []
-
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.layer_dims = [in_dim] + hidden_layers + [out_dim]
-
-        if isinstance(biases, bool):
-            biases = [biases] * (len(self.layer_dims) - 1)
+        super(DeepSets, self).__init__()
+        if new_dim:
+            assert in_dim == 1
+            swap_last_axes = False
+        self.mlp = MLP(in_dim, out_dim, hidden_layers, biases, activation, activation_constant, device, dtype)
+        self.new_dim = new_dim
+        self.swap_last_axes = swap_last_axes
+        if aggregation is None:
+            self.agg = nn.Identity()
         else:
-            biases = list(biases)
-            assert len(biases) == len(self.layer_dims) - 1
+            self.agg = get_aggregation(
+                agg_name=aggregation,
+                dim=-2,
+                keepdims=False
+            )
 
-        layers = [nn.Linear(self.layer_dims[0], self.layer_dims[1], bias=biases[0])]
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.new_dim:
+            fx = x.unsqueeze(-1)
+        else:
+            if self.swap_last_axes:
+                assert x.size(-2) == self.mlp.in_dim
+                fx = x.swapaxes(-1, -2)
+            else:
+                assert x.size(-1) == self.mlp.in_dim
+                fx = x
 
-        for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[1:-1], self.layer_dims[2:])):
-            layers.append(get_activation(activation, activation_constant))
-            layers.append(nn.Linear(in_dim, out_dim, bias=biases[i + 1]))
-
-        self.layers = nn.Sequential(*layers).to(device=device, dtype=dtype)
-
-    def forward(self, x):
-        return self.layers(x)
+        return self.agg(self.mlp(fx))
 
 
-if __name__ == '__main__':
-    pass
 
-    # mlp = MLP(5, 7, [3, 10, 2], True)
-    # print(mlp)
+

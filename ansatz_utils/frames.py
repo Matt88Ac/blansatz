@@ -1,6 +1,6 @@
 from functools import partial
-from typing import Union, Optional, Tuple
 from types import FunctionType, MethodType
+from typing import Union, Optional
 
 import torch
 from torch import Tensor
