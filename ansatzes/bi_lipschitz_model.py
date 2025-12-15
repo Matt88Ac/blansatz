@@ -31,6 +31,11 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
         if model_name in ['ds', 'deepsets', 'deepset']:
             model_kwargs['new_dim'] = True
             model_kwargs['in_dim'] = 1
+
+        if 'biases' in model_kwargs.keys():
+            if isinstance(model_kwargs['biases'], bool):
+                if model_kwargs['biases']:
+                    model_kwargs['biases'] = 'all_but_last'
         self.tau = random_negative_permutation(in_channels, device)
         self.psi = AnInvariantEmbedding(in_dim, in_channels, embedding_dim).to(device=device, dtype=dtype)
         self.model = get_model(model_name, **model_kwargs)

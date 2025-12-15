@@ -18,7 +18,7 @@ class MLP(nn.Module):
     """
 
     def __init__(self, in_dim: int, out_dim: int, hidden_layers: Optional[list[int]] = None,
-                 biases: Optional[Union[bool, Iterable[bool]]] = True,
+                 biases: Optional[Union[bool, Iterable[bool], str]] = True,
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
                  device=torch.device('cpu'), dtype=torch.float64):
         """
@@ -29,7 +29,7 @@ class MLP(nn.Module):
                 Desired output dimension.
             hidden_layers (list[int], Optional):
                 The width of each hidden layer. If None, then the MLP is equivalent to a linear layer. Default: None.
-            biases (bool, Iterable[bool], Optional):
+            biases (bool, Iterable[bool], str, Optional):
                 When set to True, each linear layer learns an additive bias, and doesn't when set to False. Another
                 option is to specify for each hidden layer, by setting a boolean iterable. Default: True.
             activation: (str, Optional):
@@ -66,6 +66,9 @@ class MLP(nn.Module):
 
         if isinstance(biases, bool):
             biases = [biases] * (len(self.layer_dims) - 1)
+        elif biases == 'all_but_last':
+            biases = [True] * (len(self.layer_dims) - 1)
+            biases[-1] = False
         else:
             biases = list(biases)
             assert len(biases) == len(self.layer_dims) - 1

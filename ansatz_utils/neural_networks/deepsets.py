@@ -20,7 +20,7 @@ class DeepSets(nn.Module):
      """
 
     def __init__(self, in_dim: int, out_dim: int, hidden_layers: Optional[list[int]] = None,
-                 biases: Optional[Union[bool, Iterable[bool]]] = True,
+                 biases: Optional[Union[bool, Iterable[bool], str]] = True,
                  new_dim: Optional[bool] = False,
                  swap_last_axes: Optional[bool] = True,
                  aggregation: Optional[str] = None,
