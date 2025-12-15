@@ -3,7 +3,7 @@ from typing import Optional, Union, Iterable
 import torch
 from torch import nn
 from .activations import get_activation
-from .aggregations import get_aggregation
+from .aggregations import get_aggregation, partial
 from .mlp import MLP
 
 
@@ -13,11 +13,8 @@ class DeepSets(nn.Module):
 
          Attributes:
             mlp (nn.Module):
-                Size of each input sample.
-            out_dim (int):
-                Size of each output sample.
-            layer_dims (list[int]):
-                Each input/output dimension.
+                An MLP model that defines the architecture.
+            agg (partial):
             swap_last_axes (bool):
                 Whether to swap between the last two axes, upon the forward pass. Default: True.
      """
@@ -82,16 +79,15 @@ class DeepSets(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.new_dim:
-            fx = x.unsqueeze(-1)
+            fx = self.mlp(x.unsqueeze(-1))
         else:
             if self.swap_last_axes:
                 assert x.size(-2) == self.mlp.in_dim
-                fx = x.swapaxes(-1, -2)
+                fx = self.mlp(x.swapaxes(-1, -2))
             else:
                 assert x.size(-1) == self.mlp.in_dim
-                fx = x
-
-        return self.agg(self.mlp(fx))
+                fx = self.mlp(x)
+        return self.agg(fx)
 
 
 
