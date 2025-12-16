@@ -7,7 +7,7 @@ from ansatzes import BiLipschitzAntiSymmetricModel
 from ansatz_utils import get_model, LinearWeightedFrame, NonLinearWeightedFrame
 
 
-class AfaNettModel(nn.Module):
+class AfaNetModel(nn.Module):
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  frame_name: Optional[str] = 'nonlinear',
                  model_name: Optional[str] = 'mlp',
@@ -28,7 +28,7 @@ class AfaNettModel(nn.Module):
             dtype:
             **model_kwargs:
         """
-        super(AfaNettModel, self).__init__()
+        super(AfaNetModel, self).__init__()
         if embedding_dim is None:
             embedding_dim = (2 * in_dim * in_channels) + 1
 
