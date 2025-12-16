@@ -27,7 +27,7 @@ class OnVandermondeModel(nn.Module):
         if embedding_dim is None:
             embedding_dim = (in_dim * in_channels) + 1
 
-        self.spatial_projector = nn.Parameter(uniform_sphere_point(embedding_dim, in_dim).to(device, dtype),
+        self.spatial_projector = nn.Parameter(uniform_sphere_sampling(embedding_dim, in_dim).to(device, dtype),
                                               requires_grad=trainable_weights)
 
         model_kwargs['in_dim'] = in_dim
