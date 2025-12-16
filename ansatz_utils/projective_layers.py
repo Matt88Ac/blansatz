@@ -73,8 +73,9 @@ class ProjectiveSorting(nn.Module):
             - the signs of the permutations which the projection of x is sorted according to.
             - the permuted input x, according to each of the permutations mentioned in the latter.
         """
-        projected_x, permutations = torch.sort(torch.einsum('md,...dn->...mn', self.spatial_projector, x),
-                                               stable=True, dim=-1)
+        projected_x, permutations = torch.sort(
+            nn.functional.linear(x.swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1),
+            stable=True, dim=-1)
 
         out_x = x.clone().unsqueeze(1)
         permutations: Tensor = permutations.unsqueeze(-2)
@@ -128,6 +129,7 @@ class AnInvariantEmbedding(nn.Module):
 
         self.reset_parameters()
 
+    @torch.no_grad()
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.channel_projection)
 
@@ -135,7 +137,9 @@ class AnInvariantEmbedding(nn.Module):
         projected_x, signs, sorted_x = self.projection_sorting(x)
         del sorted_x
         projected_x = torch.cat([projected_x, signs * alternation_separation(projected_x)], dim=-1)
-        return torch.einsum('...mn,mn->...m', projected_x, self.channel_projection)
+        *size, M, N = projected_x.shape
+        size = [1]*len(size)
+        return (self.channel_projection.view(*size, M, N) * projected_x).sum(dim=-1)
 
 
 if __name__ == '__main__':
