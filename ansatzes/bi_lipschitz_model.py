@@ -16,6 +16,7 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
             in_channels:
             out_dim:
             embedding_dim:
+            model_name:
             device:
             dtype:
             **model_kwargs:
