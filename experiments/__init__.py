@@ -1,12 +1,19 @@
 import os
-from .cross_product_discontinuity import *
+
+import numpy as np
+from numpy import linalg as la
+from .norm_cross_product_discontinuity import *
 from .determinant import *
 from .cross_product import *
 
 PATH = os.path.dirname(__file__)
-EXPERIMENTS = ['determinant', 'cross_product', 'cross_product_discontinuity']
+EXPERIMENTS = {
+    'determinant': la.det,
+    'cross_product': multi_cross,
+    'norm_cross_product_discontinuity': discontinuous_multi_cross
+}
 
-for f in EXPERIMENTS:
+for f in EXPERIMENTS.keys():
     if not os.path.exists(PATH + os.sep + f + os.sep + 'data'):
         os.mkdir(PATH + os.sep + f + os.sep + 'data')
         os.mkdir(PATH + os.sep + f + os.sep + 'data' + os.sep + 'train')
