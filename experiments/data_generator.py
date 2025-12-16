@@ -29,9 +29,13 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
         os.mkdir(PATH + f'{n_elements}_{dim}{os.sep}validation')
         os.mkdir(PATH + f'{n_elements}_{dim}{os.sep}test')
 
+    max_val = 0
     for count, name in zip([n_train, n_val, n_test], ['train', 'validation', 'test']):
-        for i in tqdm(range(count), desc=name):
+        pbar = tqdm(range(count), desc=name + f', max value = {max_val}')
+        for i in pbar:
             matrix = np.random.uniform(lower, upper, size=(1, dim, n_elements))
             fx = exp_func(matrix)
             np.save(PATH + f'{n_elements}_{dim}{os.sep}{name}{os.sep}matrix_{i}', matrix)
             np.save(PATH + f'{n_elements}_{dim}{os.sep}{name}{os.sep}res_{i}', fx)
+            max_val = max(max_val, np.max(fx))
+            pbar.set_description(name + f', max value = {max_val}')
