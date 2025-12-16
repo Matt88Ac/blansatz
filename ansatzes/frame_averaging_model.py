@@ -64,7 +64,10 @@ class AfaNetModel(nn.Module):
 
 if __name__ == '__main__':
     b, d, n = 10, 3, 15
-    model = AfaNettModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', model_name='mlp', an_invariant=True)
+    model = AfaNetModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', model_name='mlp', an_invariant=True)
+
+    print(model)
+    exit(0)
 
     temp = torch.rand(b, d, n, dtype=torch.float64, device='cpu') * 1000
 
