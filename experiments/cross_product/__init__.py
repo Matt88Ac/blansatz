@@ -8,6 +8,3 @@ def multi_cross(x: np.ndarray) -> np.ndarray:
         res = np.cross(res, x[..., i])
 
     return res
-
-
-
