@@ -24,6 +24,7 @@ class ExperimentDataset(Dataset):
     def __init__(self, experiment: EXPERIMENTS, n_elements: int, dim: int,
                  dataset: Literal['train', 'validation', 'test'] = 'train',
                  device=torch.device('cuda'), dtype=torch.float64):
+
         assert experiment in EXPERIMENTS
 
         self.dir = f'{os.sep}{experiment}{os.sep}data{os.sep}{n_elements}_{dim}{os.sep}{dataset}{os.sep}'
