@@ -1,8 +1,7 @@
 import os
 
-from numpy import linalg as la
-
 from .data_generator import EXPERIMENTS, generate_datasets
+from .data_loader import get_experiment_dataloader, ExperimentDataset, dataset_collector
 
 PATH = os.path.dirname(__file__)
 
