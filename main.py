@@ -13,4 +13,8 @@ if __name__ == '__main__':
 
     # generate_datasets('norm_cross_product_discontinuity', 10, 3, 100_000, 10_000, 20_000, -1.5, 1.5)
     # generate_datasets('norm_cross_product_discontinuity', 50, 3, 100_000, 10_000, 20_000, -1.3, 1.3)
-    generate_datasets('norm_cross_product_discontinuity', 300, 3, 100_000, 10_000, 20_000, -1.3, 1.5)
+    # generate_datasets('norm_cross_product_discontinuity', 300, 3, 100_000, 10_000, 20_000, -1.3, 1.5)
+
+    # generate_datasets('cross_product', 10, 3, 100_000, 10_000, 20_000, -1.5, 1.5)
+    # generate_datasets('cross_product', 50, 3, 100_000, 10_000, 20_000, -1.3, 1.3)
+    # generate_datasets('cross_product', 300, 3, 100_000, 10_000, 20_000, -1.3, 1.5)
