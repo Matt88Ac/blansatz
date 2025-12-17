@@ -66,8 +66,8 @@ def get_experiment_dataloader(experiment: EXPERIMENTS, n_elements: int, dim: int
                               multiprocessing_context=None, generator=None, *, prefetch_factor: Optional[int] = None,
                               persistent_workers: bool = False, pin_memory_device: str = '',
                               device=torch.device('cuda'), dtype=torch.float64) -> DataLoader:
-    exp_dataset = ExperimentDataset(experiment, n_elements, dim, dataset, device, dtype)
 
+    exp_dataset = ExperimentDataset(experiment, n_elements, dim, dataset, device, dtype)
     return DataLoader(exp_dataset, batch_size, shuffle=shuffle, collate_fn=dataset_collector,
                       num_workers=num_workers, pin_memory=pin_memory, drop_last=drop_last, timeout=timeout,
                       worker_init_fn=worker_init_fn, multiprocessing_context=multiprocessing_context,
