@@ -6,6 +6,7 @@ from typing import Literal, Optional, Callable
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
+from pytorch_lightning import LightningDataModule
 
 EXPERIMENTS = {'determinant', 'cross_product', 'norm_cross_product_discontinuity'}
 
@@ -59,24 +60,49 @@ class ExperimentDataset(Dataset):
         return matrix, target
 
 
-def get_experiment_dataloader(experiment: EXPERIMENTS, n_elements: int, dim: int,
-                              dataset: Literal['train', 'validation', 'test'] = 'train',
-                              batch_size: Optional[int] = 1, shuffle: Optional[bool] = None, num_workers: int = 0,
-                              pin_memory: bool = False, drop_last: bool = False, timeout: float = 0,
-                              worker_init_fn: Optional[Callable[[int], NoneType]] = None,
-                              multiprocessing_context=None, generator=None, *, prefetch_factor: Optional[int] = None,
-                              persistent_workers: bool = False, pin_memory_device: str = '',
-                              device=torch.device('cuda'), dtype=torch.float64) -> DataLoader:
+class ExperimentLightningDataModule(LightningDataModule):
+    def __init__(self, experiment: EXPERIMENTS, n_elements: int, dim: int, batch_size: int = 64,
+                 shuffle: bool = True, n_workers: int = 0, pin_memory: bool = False,
+                 persistent_workers: bool = False, device: str = 'cuda', dtype=torch.float64):
+        super().__init__()
+        self.n_elements = n_elements
+        self.experiment = experiment
+        self.batch_size = batch_size
+        self.device = device
+        self.dim = dim
+        self.shuffle = shuffle
+        self.n_workers = n_workers
+        self.pin_memory = pin_memory
+        self.persistent_workers = persistent_workers
+        self.dtype = dtype
 
-    exp_dataset = ExperimentDataset(experiment, n_elements, dim, dataset, device, dtype)
-    return DataLoader(exp_dataset, batch_size, shuffle=shuffle, collate_fn=dataset_collector,
-                      num_workers=num_workers, pin_memory=pin_memory, drop_last=drop_last, timeout=timeout,
-                      worker_init_fn=worker_init_fn, multiprocessing_context=multiprocessing_context,
-                      generator=generator, prefetch_factor=prefetch_factor,
-                      persistent_workers=persistent_workers, pin_memory_device=pin_memory_device)
+    def setup(self, stage):
+        # assign to use in dataloaders
+        self.train_dataset = ExperimentDataset(self.experiment, self.n_elements, self.dim, 'train',
+                                               device=self.device, dtype=self.dtype)
+        self.val_dataset = ExperimentDataset(self.experiment, self.n_elements, self.dim, 'validation',
+                                             device=self.device, dtype=self.dtype)
+        self.test_dataset = ExperimentDataset(self.experiment, self.n_elements, self.dim, 'test',
+                                              device=self.device, dtype=self.dtype)
+
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
+                          shuffle=self.shuffle, num_workers=self.n_workers,
+                          pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
+
+    def val_dataloader(self):
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
+                          shuffle=self.shuffle, num_workers=self.n_workers,
+                          pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
+
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
+                          shuffle=self.shuffle, num_workers=self.n_workers,
+                          pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
 
 
 if __name__ == '__main__':
+    exit(0)
     data = get_experiment_dataloader('norm_cross_product_discontinuity', 10, 3, device='cpu')
 
     for batch_ndx, sample in enumerate(data):
