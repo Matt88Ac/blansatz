@@ -29,6 +29,7 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
         model_kwargs['out_dim'] = out_dim
         model_kwargs['device'] = device
         model_kwargs['dtype'] = dtype
+
         if model_name in ['ds', 'deepsets', 'deepset']:
             model_kwargs['new_dim'] = True
             model_kwargs['in_dim'] = 1
