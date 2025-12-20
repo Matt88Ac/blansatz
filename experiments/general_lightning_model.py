@@ -37,6 +37,7 @@ class GeneralTrainer(LightningModule):
 
         self.model_name = f'{model_name}_{in_dim}_{in_dim}'
         self.ansatz_kwargs = ansatz_kwargs.copy()
+        self.ansatz_kwargs['model_name'] = model_name
         self.ansatz_kwargs['in_dim'] = in_dim
         self.ansatz_kwargs['in_channels'] = in_channels
         self.ansatz_kwargs['out_dim'] = out_dim
