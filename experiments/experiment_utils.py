@@ -14,10 +14,10 @@ class MeanAbsoluteRelativeError(torch.nn.Module):
     def __init__(self):
         super(MeanAbsoluteRelativeError, self).__init__()
 
-    def forward(self, target: torch.Tensor, prediction: torch.Tensor) -> torch.Tensor:
+    def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         zeros = (target == 0).to(dtype=target.dtype)
         loss = (target - prediction) / (target + zeros)
-        loss = torch.sqrt((loss ** 2).mean())
+        loss = loss.abs().nanmean()
         return loss
 
 
@@ -63,3 +63,16 @@ def get_lr_scheduler(lr_scheduler: AVAILABLE_LR_SCHED, *args, **kwargs) -> parti
         return partial(CosineAnnealingWarmRestarts, *args, **kwargs)
     elif lr_scheduler.lower() == 'cos':
         return partial(CosineAnnealingLR, *args, **kwargs)
+
+
+def get_dtype(dtype: str) -> torch.dtype:
+    if '64' in dtype:
+        return torch.float64
+
+    elif '32' in dtype:
+        return torch.float32
+
+    elif '16' in dtype:
+        return torch.float16
+
+
