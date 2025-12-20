@@ -8,10 +8,13 @@ from ansatz_utils import get_model, vandermonde_determinant, uniform_sphere_samp
 
 class OnVandermondeModel(nn.Module):
     """
-        Implementation of the discontinuous ansatz from https://arxiv.org/html/2402.15167v2
+        Implementation of the discontinuous ansatz from https://arxiv.org/html/2402.15167v2.
+            In our implementation, we favour numerical stability over runtime performance.
     """
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
+                 model_name: Optional[str] = 'ds',
                  trainable_weights: Optional[bool] = False,
+                 single_model: Optional[bool] = False,
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **model_kwargs):
         """
         Args:
@@ -19,6 +22,9 @@ class OnVandermondeModel(nn.Module):
             in_channels:
             out_dim:
             embedding_dim:
+            model_name:
+            trainable_weights:
+            single_model:
             device:
             dtype:
             **model_kwargs:
@@ -31,7 +37,6 @@ class OnVandermondeModel(nn.Module):
                                               requires_grad=trainable_weights)
 
         model_kwargs['in_dim'] = in_dim
-        model_kwargs['out_dim'] = out_dim * embedding_dim
         model_kwargs['device'] = device
         model_kwargs['dtype'] = dtype
 
@@ -39,22 +44,29 @@ class OnVandermondeModel(nn.Module):
         model_kwargs['swap_last_axes'] = True
 
         self.out_dim = out_dim
-
-        self.model = get_model('ds', **model_kwargs)
+        self.single_model = single_model
+        if single_model:
+            model_kwargs['out_dim'] = out_dim * embedding_dim
+            self.model = get_model('ds', **model_kwargs)
+        else:
+            model_kwargs['out_dim'] = out_dim
+            self.model_list = nn.ModuleList([get_model('ds', **model_kwargs) for i in range(embedding_dim)])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         *shape, d, n = x.shape
         N = n * (n - 1) / 2
+        proj_x = nn.functional.linear(x.clone().swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1)
 
-        proj_x = torch.einsum('md,...dn->...mn', self.spatial_projector, x.clone())
         weights = torch.float_power(
-            torch.norm(vandermonde_determinant(proj_x.clone()), p=2, dim=-2, keepdim=True).clone(),
-            1 / N)
+            torch.norm(vandermonde_determinant(proj_x), p=2, dim=-2, keepdim=True),
+            1 / N).clone()
         proj_x = proj_x / (weights + (weights == 0).to(dtype=weights.dtype))
 
-        fx = (self.model(x).reshape(*shape, self.embedding_dim, self.out_dim) * vandermonde_determinant(proj_x)).sum(
-            dim=-2)
-
+        if self.single_model:
+            fx = self.model(x).reshape(*shape, self.embedding_dim, self.out_dim)
+        else:
+            fx = torch.cat([model(x).unsqueeze(-2) for model in self.model_list], dim=-2)
+        fx = (fx * vandermonde_determinant(proj_x)).sum(dim=-2)
         return fx
 
     @property
@@ -64,7 +76,7 @@ class OnVandermondeModel(nn.Module):
 
 if __name__ == '__main__':
     b, d, n = 10, 3, 15
-    model = OnVandermondeModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', aggregation='max')
+    model = OnVandermondeModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', aggregation='max', single_model=False)
 
     temp = torch.rand(b, d, n, dtype=torch.float64, device='cpu') * 10
 
