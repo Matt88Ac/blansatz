@@ -1,13 +1,11 @@
 from time import time
-from typing import Literal, List, Optional, Iterable
+from typing import Optional, Iterable
 
 import torch
 from pytorch_lightning import LightningModule
 
-from .experiment_utils import (get_loss, get_optimizer, get_lr_scheduler, get_dtype,
-                               AVAILABLE_OPTIMIZERS, AVAILABLE_LOSSES, AVAILABLE_LR_SCHED)
-
 from ansatzes import AfaNetModel, BiLipschitzAntiSymmetricModel, OnVandermondeModel
+from .experiment_utils import (get_loss, get_optimizer, get_lr_scheduler)
 
 
 class GeneralTrainer(LightningModule):
@@ -117,6 +115,8 @@ class LightningAfaNetModel(GeneralTrainer):
 
         self.model = AfaNetModel(**self.ansatz_kwargs)
 
+        self.model_name = f'afanet_{frame_name}_{an_invariant}_{self.model_size}_' + self.model_name
+
 
 class LightningBiLipschitzAntiSymmetricModel(GeneralTrainer):
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
@@ -132,6 +132,8 @@ class LightningBiLipschitzAntiSymmetricModel(GeneralTrainer):
                                                                      **ansatz_kwargs)
 
         self.model = BiLipschitzAntiSymmetricModel(**self.ansatz_kwargs)
+
+        self.model_name = f'bl_{self.model_size}_' + self.model_name
 
 
 class LightningOnVandermondeModel(GeneralTrainer):
@@ -152,3 +154,4 @@ class LightningOnVandermondeModel(GeneralTrainer):
                                                           **ansatz_kwargs)
 
         self.model = OnVandermondeModel(**self.ansatz_kwargs)
+        self.model_name = f'on_{trainable_weights}_{single_model}_{self.model_size}_' + self.model_name
