@@ -9,6 +9,16 @@ AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
 AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare'}
 
 
+class MeanAbsoluteRelativeError(torch.nn.Module):
+
+    def __init__(self):
+        super(MeanAbsoluteRelativeError, self).__init__()
+
+    def forward(self, target: torch.Tensor, prediction: torch.Tensor) -> torch.Tensor:
+        zeros = (target == 0).to(dtype=target.dtype)
+        loss = (target - prediction) / (target + zeros)
+        loss = torch.sqrt((loss ** 2).mean())
+        return loss
 
 
 def get_loss(loss: str) -> torch.nn.Module:
