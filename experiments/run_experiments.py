@@ -34,7 +34,7 @@ def run_experiment(experiment: EXPERIMENTS, n_elements: int, dim: int, ansatz_na
                                          n_workers, pin_memory, persistent_workers,
                                          device=device, dtype=dtype)
 
-    PATH = os.path.dirname(__file__) + os.sep + 'logs' + os.sep + f'{ansatz.model_name}_{data.batch_size}'
+    PATH = os.path.dirname(__file__) + os.sep + f'{experiment}_logs' + os.sep + f'{ansatz.model_name}_{data.batch_size}'
 
     tb_logger = TensorBoardLogger(PATH + os.sep + "tb_logs", log_graph=True)
     csv_logger = CSVLogger(PATH + os.sep + "csv_logs")
