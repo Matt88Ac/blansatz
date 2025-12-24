@@ -1,17 +1,17 @@
 import os
 from glob import glob
-from types import NoneType
-from typing import Literal, Optional, Callable
+from typing import Literal
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning import LightningDataModule
+from torch.utils.data import Dataset, DataLoader
 
 EXPERIMENTS = {'determinant', 'cross_product', 'norm_cross_product_discontinuity'}
 
 
 def dataset_collector(batch: list[torch.Tensor, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
+    """Collate function to combine individual samples into a batch. Utility function for DataLoader."""
     N = len(batch)
     matrices, targets = batch[0]
     for i in range(1, N):
@@ -22,7 +22,10 @@ def dataset_collector(batch: list[torch.Tensor, torch.Tensor]) -> tuple[torch.Te
 
 
 class ExperimentDataset(Dataset):
-    def __init__(self, experiment: EXPERIMENTS, n_elements: int, dim: int,
+    """
+    Dataset class for loading experiment data.
+    """
+    def __init__(self, experiment: str, n_elements: int, dim: int,
                  dataset: Literal['train', 'validation', 'test'] = 'train',
                  device=torch.device('cuda'), dtype=torch.float64):
 
@@ -61,7 +64,10 @@ class ExperimentDataset(Dataset):
 
 
 class ExperimentLightningDataModule(LightningDataModule):
-    def __init__(self, experiment: EXPERIMENTS, n_elements: int, dim: int, batch_size: int = 64,
+    """
+    LightningDataModule for loading experiment data.
+    """
+    def __init__(self, experiment: str, n_elements: int, dim: int, batch_size: int = 64,
                  shuffle: bool = True, n_workers: int = 0, pin_memory: bool = False,
                  persistent_workers: bool = False, device: str = 'cuda', dtype=torch.float64):
         super().__init__()
