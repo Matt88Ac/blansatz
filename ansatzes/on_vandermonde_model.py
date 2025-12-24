@@ -8,8 +8,20 @@ from ansatz_utils import get_model, vandermonde_determinant, uniform_sphere_samp
 
 class OnVandermondeModel(nn.Module):
     """
-        Implementation of the discontinuous ansatz from https://arxiv.org/html/2402.15167v2.
-            In our implementation, we favour numerical stability over runtime performance.
+    Implementation of the discontinuous ansatz from https://arxiv.org/html/2402.15167v2. 
+    In our implementation, we favour numerical stability over runtime performance.
+
+    Attributes:
+        spatial_projector (nn.Parameter):
+            The spatial projector used to project the input data.
+        out_dim (int):
+            The output dimension.
+        single_model (bool):
+            Whether to use a single Sn-invariant model or multiple Sn-invariant models, one for each weight.
+        model (Optional[nn.Module]):
+            The Sn-invariant model, used when single_model is True.
+        model_list (Optional[nn.ModuleList]):
+            The list of Sn-invariant models, used when single_model is False.
     """
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  model_name: Optional[str] = 'ds',
@@ -18,16 +30,33 @@ class OnVandermondeModel(nn.Module):
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **model_kwargs):
         """
         Args:
-            in_dim:
-            in_channels:
-            out_dim:
-            embedding_dim:
-            model_name:
-            trainable_weights:
-            single_model:
-            device:
-            dtype:
-            **model_kwargs:
+            in_dim (int):
+                The input dimension.
+            in_channels (int):
+                The number of input channels.
+            out_dim (int):
+                The output dimension.
+            embedding_dim (Optional[int]):
+                The dimension of the embedding. If None, it is computed as (in_dim * in_channels) + 1.
+            model_name (Optional[str]):
+                The name of the model to use. Must be an Sn-invariant model. Default is 'ds'.
+            trainable_weights (Optional[bool]):
+                Whether the spatial projector weights are trainable. Default is False.
+            single_model (Optional[bool]):
+                Whether to use a single Sn-invariant model or multiple Sn-invariant models, one for each weight. Default is False.
+            device (Optional):
+                The device to use. Default is 'cpu'.
+            dtype (Optional):
+                The data type to use. Default is torch.float64.
+            model_kwargs:
+                Additional keyword arguments to pass to the Sn-invariant model.
+
+        Example:
+            >>> model = OnVandermondeModel(3, 5, 2, hidden_layers=[10, 20], device='cpu', aggregation='max', single_model=True)
+            >>> x = torch.rand(4, 3, 5)
+            >>> y = model(x)
+            >>> print(y.shape)
+            torch.Size([4, 2])
         """
         super(OnVandermondeModel, self).__init__()
         if embedding_dim is None:
