@@ -1,4 +1,7 @@
-from experiments import generate_datasets
+import torch
+from experiments import run_experiments
+
+from experiments_data import generate_datasets
 
 if __name__ == '__main__':
     pass
@@ -18,3 +21,18 @@ if __name__ == '__main__':
     # generate_datasets('cross_product', 10, 3, 100_000, 10_000, 20_000, -1.5, 1.5)
     # generate_datasets('cross_product', 50, 3, 100_000, 10_000, 20_000, -1.3, 1.3)
     # generate_datasets('cross_product', 300, 3, 100_000, 10_000, 20_000, -1.3, 1.5)
+
+    run_experiments.run_experiment(experiment='determinant', ansatz_name='bl',
+                                   n_elements=10, dim=10, batch_size=256,
+                                   # embedding_dim=16,
+                                   optimizer_kwargs=dict(optimizer='adam', lr=1e-3, amsgrad=True),
+                                   lr_scheduler_kwargs=dict(lr_scheduler='reduce', factor=0.8, patience=2,
+                                                            min_lr=1e-5, ),
+                                   loss='l1', extra_metrics=['mse', 'l1', 'mare'],
+                                   # model_name='ds', aggregation='max',
+                                   model_name='mlp',
+                                   hidden_layers=[256, 256, 256], activation='tanh', biases='all_but_last',
+                                   device='cuda', dtype=torch.float32,
+                                   persistent_workers=True, n_workers=12
+                                   )
+
