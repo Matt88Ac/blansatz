@@ -49,8 +49,8 @@ class ExperimentDataset(Dataset):
         return self.n_files
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
-        matrix = torch.tensor(np.load(self.dir + f'matrix_{idx}.npy'), dtype=self.dtype, device=self.device)
-        target = torch.tensor(np.load(self.dir + f'res_{idx}.npy'), dtype=self.dtype, device=self.device)
+        matrix = torch.from_numpy(np.load(self.dir + f'matrix_{idx}.npy')).to(dtype=self.dtype, device=self.device)
+        target = torch.from_numpy(np.load(self.dir + f'res_{idx}.npy')).to(dtype=self.dtype, device=self.device)
         if target.dim() == 1:
             target = target.unsqueeze(0)
 
@@ -92,7 +92,7 @@ class ExperimentLightningDataModule(LightningDataModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
                           shuffle=self.shuffle, num_workers=self.n_workers,
-                          pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
+                          pin_memory=self.pin_memory, persistent_workers=False)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
@@ -106,6 +106,7 @@ class ExperimentLightningDataModule(LightningDataModule):
 
 
 if __name__ == '__main__':
+    pass
     exit(0)
     data = get_experiment_dataloader('norm_cross_product_discontinuity', 10, 3, device='cpu')
 
