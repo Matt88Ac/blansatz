@@ -7,19 +7,38 @@ from ansatz_utils import get_model, random_negative_permutation, AnInvariantEmbe
 
 
 class BiLipschitzAntiSymmetricModel(nn.Module):
+    """
+    Anti-Symmetric model, that relies on a bi-Lipschitz An-invariant embedding followed by a standard model, as described in our work.
+    
+    Attributes:
+        tau (Tensor):
+            A random negative permutation.
+        mu (AnInvariantEmbedding):
+            A bi-Lipschitz, An-invariant embedding module.
+        model (nn.Module):
+            A standard model (e.g., MLP, DeepSets) that processes the embedded input.
+    """
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  model_name: Optional[str] = 'mlp',
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **model_kwargs):
         """
         Args:
-            in_dim:
-            in_channels:
-            out_dim:
-            embedding_dim:
-            model_name:
-            device:
-            dtype:
-            **model_kwargs:
+            in_dim (int):
+                The input dimension.
+            in_channels (int):
+                The number of input channels.
+            out_dim (int):
+                The output dimension.
+            embedding_dim (Optional[int]):
+                The dimension of the embedding. If None, it is computed as (2 * in_dim * in_channels) + 1.
+            model_name (Optional[str]):
+                The name of the model to use. Default is 'mlp'.
+            device (Optional):
+                The device to use. Default is CPU.
+            dtype (Optional):
+                The data type to use. Default is torch.float64.
+            model_kwargs:
+                Additional keyword arguments for the model.
         """
         super(BiLipschitzAntiSymmetricModel, self).__init__()
         if embedding_dim is None:
