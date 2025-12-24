@@ -8,7 +8,6 @@ class AllDifferences(autograd.Function):
     """
 
     @staticmethod
-    @torch.jit.export
     def forward(ctx, inp: torch.Tensor) -> torch.Tensor:
         """
         Args:
@@ -32,7 +31,6 @@ class AllDifferences(autograd.Function):
         return torch.cat(differences, dim=-1)
 
     @staticmethod
-    @torch.jit.export
     def backward(ctx, grad_output):
         X, = ctx.saved_tensors
         n = ctx.n
@@ -56,7 +54,6 @@ class AllDifferences(autograd.Function):
         return grad_input
 
 
-@torch.jit.script
 def vandermonde_determinant(X: torch.Tensor) -> torch.Tensor:
     """
     Args:
