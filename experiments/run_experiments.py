@@ -16,12 +16,17 @@ ANSATZES = {'bl': LightningBiLipschitzAntiSymmetricModel,
 def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                    embedding_dim: Optional[int] = None,
                    model_name: Optional[str] = 'mlp',
+                   max_epochs: Optional[int] = 100,
                    optimizer_kwargs: Optional[dict] = None,
                    lr_scheduler_kwargs: Optional[dict] = None, loss: Optional[str] = 'mse',
                    extra_metrics: Optional[Iterable[str]] = None,
-                   batch_size: int = 64,
-                   shuffle: bool = True, n_workers: int = 0, pin_memory: bool = False,
-                   persistent_workers: bool = False, device: str = 'cuda', dtype=torch.float64,
+                   early_stopping: Optional[bool] = True,
+                   early_stopping_patience: Optional[int] = 3,
+                   early_stopping_min_delta: Optional[float] = 1e-4,
+                   batch_size: Optional[int] = 64, shuffle: Optional[bool] = True,
+                   n_workers: int = 0, pin_memory: bool = False,
+                   persistent_workers: bool = False,
+                   device: str = 'cuda', dtype=torch.float64,
                    **ansatz_kwargs):
     """
     Run a single experiment with specified parameters.
@@ -33,12 +38,16 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         ansatz_name (str): Name of the ansatz to use. Must be one of the keys in ANSATZES ('bl', 'on', 'afanet').
         embedding_dim (int, optional): Dimensionality of the embedding space. Default is None.
         model_name (str, optional): Name of the model architecture to use. Default is 'mlp'.
+        max_epochs (int, optional): Maximum number of training epochs. Default is 100.
         optimizer_kwargs (dict, optional): Dictionary of optimizer parameters. Default is None.
         lr_scheduler_kwargs (dict, optional): Dictionary of learning rate scheduler parameters. Default is None.
         loss (str, optional): Loss function to use. Default is 'mse'.
         extra_metrics (Iterable[str], optional): Additional metrics to compute during training. Default is None.
-        batch_size (int): Batch size for training. Default is 64.
-        shuffle (bool): Whether to shuffle the data. Default is True.
+        early_stopping (bool, optional): Whether to use early stopping, based on validation loss. Default is True.
+        early_stopping_patience (int, optional): Number of epochs with no improvement after which training will be stopped. Default is 3.
+        early_stopping_min_delta (float, optional): Minimum change in the monitored quantity to qualify as an improvement. Default is 1e-4.
+        batch_size (int, optional): Batch size for training. Default is 64.
+        shuffle (bool, optional): Whether to shuffle the data. Default is True.
         n_workers (int): Number of worker processes for data loading. Default is 0.
         pin_memory (bool): Whether to pin memory during data loading. Default is False.
         persistent_workers (bool): Whether to use persistent workers for data loading. Default is False.
@@ -47,12 +56,10 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         ansatz_kwargs: Additional keyword arguments to pass to the ansatz constructor.
 
     Examples:
-        >>> run_experiment('determinant', n_elements=15, dim=15, ansatz_name='bl', embedding_dim=16,
-                       model_name='mlp', optimizer_kwargs={'lr': 0.001}, batch_size=128, device='cuda')
+        >>> run_experiment('determinant', n_elements=15, dim=15, ansatz_name='bl', embedding_dim=16, model_name='mlp', optimizer_kwargs={'lr': 0.001}, batch_size=128, device='cuda')
         # Runs the determinant experiment with a bi-Lipschitz antisymmetric ansatz on a 15x15 input set.
 
-        >>> run_experiment('cross_product', n_elements=10, dim=3, ansatz_name='on', embedding_dim=32,
-                       model_name='ds', optimizer_kwargs={'lr': 0.0005}, loss='l1', extra_metrics=['mse', 'mare'], device='cpu')
+        >>> run_experiment('cross_product', n_elements=10, dim=3, ansatz_name='on', embedding_dim=32,  model_name='ds', optimizer_kwargs={'lr': 0.0005}, loss='l1', extra_metrics=['mse', 'mare'], device='cpu')
     """
     assert ansatz_name in ANSATZES.keys()
     assert experiment in EXPERIMENTS
@@ -77,18 +84,22 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         save_top_k=1,
         save_last=True,
     )
-    # LR_LEARN = FineTuneLearningRateFinder(k=10, strategy='mode', num_training_steps=10)
+
+    call_backs = [checkpoint, callbacks.LearningRateMonitor(), callbacks.TQDMProgressBar(leave=False)]
+    if early_stopping:
+        call_backs.append(
+            callbacks.EarlyStopping('val_loss', early_stopping_min_delta, early_stopping_patience,
+                                    stopping_threshold=0)
+        )
 
     trainer = Trainer(
         logger=[csv_logger, tb_logger],
         accelerator="gpu" if device == 'cuda' else "cpu",
-        max_epochs=100,
-        callbacks=[checkpoint,
-                   callbacks.LearningRateMonitor(),
-                   callbacks.RichProgressBar(leave=False),
-                   ],  # LR_LEARN],
+        max_epochs=max_epochs,
+        callbacks=call_backs,
         enable_checkpointing=True,
         log_every_n_steps=1,
         # gradient_clip_val=1.0, gradient_clip_algorithm='norm'
     )
     trainer.fit(ansatz, data)
+    trainer.test(ansatz, data, 'best')
