@@ -21,6 +21,13 @@ class DeepSets(nn.Module):
         biases (bool, Iterable[bool], Optional):
             When set to True, each linear layer learns an additive bias, and doesn't when set to False. Another
             option is to specify for each hidden layer, by setting a boolean iterable. Default: True.
+        new_dim (bool, Optional):
+            Whether the input dimension is a new dimension. If True, the input is expected to have shape
+            (..., n_elements, 1), and will be unsqueezed upon the forward pass. Default: False.
+        swap_last_axes (bool, Optional):
+            Whether to swap between the last two axes, upon the forward pass. Default: True.
+        aggregation (str, Optional):
+            Either one of 'mean', 'sum', 'max', 'min' or None. If None, no aggregation is performed. Default: 'mean'.
         activation: (str, Optional):
             Either one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', 'identity' or 'tanh'.
             Default: 'leakyrelu'.
@@ -34,6 +41,7 @@ class DeepSets(nn.Module):
        mlp (nn.Module):
            An MLP model that defines the architecture.
        agg (partial):
+              An aggregation function.
        swap_last_axes (bool):
            Whether to swap between the last two axes, upon the forward pass. Default: True.
 
@@ -57,7 +65,7 @@ class DeepSets(nn.Module):
                  biases: Optional[Union[bool, Iterable[bool], str]] = True,
                  new_dim: Optional[bool] = False,
                  swap_last_axes: Optional[bool] = True,
-                 aggregation: Optional[str] = None,
+                 aggregation: Optional[str] = 'mean',
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
                  device=torch.device('cpu'), dtype=torch.float64):
         super(DeepSets, self).__init__()
