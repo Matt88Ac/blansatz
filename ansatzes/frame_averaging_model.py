@@ -8,6 +8,13 @@ from ansatz_utils import get_model, LinearWeightedFrame, NonLinearWeightedFrame
 
 
 class AfaNetModel(nn.Module):
+    """
+    AfaNet model that uses frame averaging with either linear or nonlinear WS-Operator, over an unstable model, as described in our work.
+
+    Attributes:
+        frames (nn.Module):
+            A weakly-stabilizing frame averaging module (either linear or nonlinear) that processes the input using the unstable model.
+    """
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  frame_name: Optional[str] = 'nonlinear',
                  model_name: Optional[str] = 'mlp',
@@ -16,17 +23,28 @@ class AfaNetModel(nn.Module):
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **model_kwargs):
         """
         Args:
-            in_dim:
-            in_channels:
-            out_dim:
-            embedding_dim:
-            frame_name:
-            model_name:
-            an_invariant:
-            flatten:
-            device:
-            dtype:
-            **model_kwargs:
+            in_dim (int):
+                The input dimension.
+            in_channels (int):
+                The number of input channels.
+            out_dim (int):
+                The output dimension.
+            embedding_dim (Optional[int]):
+                The dimension of the embedding. If None, it is computed as (2 * in_dim * in_channels) + 1.
+            frame_name (Optional[str]):
+                The name of the frame averaging module to use. Must be either 'linear' or 'nonlinear'. Default is 'nonlinear'.
+            model_name (Optional[str]):
+                The name of the unstable model to use. Default is 'mlp'.
+            an_invariant (Optional[bool]):
+                Whether to use an An-invariant unstable model. Default is False.
+            flatten (Optional[bool]):
+                Whether to flatten the input before passing it to the unstable model (only if an_invariant is False). Default is False.
+            device (Optional):
+                The device to use. Default is 'cpu'.
+            dtype (Optional):
+                The data type to use. Default is torch.float64.
+            model_kwargs:
+                Additional keyword arguments for the unstable model.
         """
         super(AfaNetModel, self).__init__()
         if embedding_dim is None:
