@@ -16,9 +16,9 @@ def permutation_sign(p: torch.Tensor) -> torch.Tensor:
             -1 if the number of inversions in p is odd, or 1 otherwise.
 
     Example:
-        n = 10;
-        permutation = torch.randperm(n);
-        sign_p = permutation_sign(permutation);
+        >>> n = 10
+        >>> permutation = torch.randperm(n)
+        >>> sign_p = permutation_sign(permutation)
     """
     dim = len(p)
     count = torch.zeros(1, device=p.device, dtype=torch.int)
