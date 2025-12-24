@@ -10,6 +10,7 @@ AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare'}
 
 
 class MeanAbsoluteRelativeError(torch.nn.Module):
+    """Mean Absolute Relative Error Loss"""
 
     def __init__(self):
         super(MeanAbsoluteRelativeError, self).__init__()
