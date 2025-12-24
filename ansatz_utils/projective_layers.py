@@ -21,20 +21,19 @@ def alternation_separation(sorted_x: Tensor) -> Tensor:
 
 def weight_by_alternation_separation(x: Tensor) -> Tensor:
     """
-
     Args:
-        x:
+        x: a tensor of shape [..., n].
 
     Returns:
-
+        A tensor of shape [..., n-1] where each element is the minimum difference between consecutive elements in the sorted last axis.
     """
     return x * alternation_separation(torch.sort(x, dim=-1, stable=True)[0])
 
 
 class ProjectiveSorting(nn.Module):
-    """ The class constructs a layer of Alternation-Invariant functions of the form ψ(X; a, b) = [sort(a*X), Q(a*X)]*b
+    """ The class constructs a layer of Alternation-Invariant functions of the form [sort(a*X), Q(a*X)]
         where Q(X*a) = prod{sign(a*(X_j - X_i)): i < j} *  min{a*(X_j - X_i): i < j}.
-        The input is (batched) d x n matrices, and the output is (a batch of) m scalars.
+        The input is (batched) d x n matrices, and the output is (a batch of) m x n+1 matrices.
 
         Attributes:
             spatial_projector (Parameter):
