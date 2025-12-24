@@ -8,15 +8,49 @@ from .mlp import MLP
 
 
 class DeepSets(nn.Module):
-    """ DeepSets class, paper available at
-        https://proceedings.neurips.cc/paper_files/paper/2017/file/f22e4747da1aa27e363d86d40ff442fe-Paper.pdf
+    """ 
+    DeepSets class, paper available at https://proceedings.neurips.cc/paper_files/paper/2017/file/f22e4747da1aa27e363d86d40ff442fe-Paper.pdf
 
-         Attributes:
-            mlp (nn.Module):
-                An MLP model that defines the architecture.
-            agg (partial):
-            swap_last_axes (bool):
-                Whether to swap between the last two axes, upon the forward pass. Default: True.
+    Args:
+        in_dim (int):
+            Size of each input sample.
+        out_dim (int):
+            Desired output dimension.
+        hidden_layers (list[int], Optional):
+            The width of each hidden layer. If None, then the MLP is equivalent to a linear layer. Default: None.
+        biases (bool, Iterable[bool], Optional):
+            When set to True, each linear layer learns an additive bias, and doesn't when set to False. Another
+            option is to specify for each hidden layer, by setting a boolean iterable. Default: True.
+        activation: (str, Optional):
+            Either one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', 'identity' or 'tanh'.
+            Default: 'leakyrelu'.
+        activation_constant: (float, Optional):
+            A tunable hyperparameter that some of the mentioned activation functions use. Neglected when irrelevant.
+            Default: 0.01.
+        device (str, torch.device, Optional): The device. Default: 'cpu'.
+        dtype (str, torch.dtype, Optional): The dtype. Default: torch.float64.
+    
+    Attributes:
+       mlp (nn.Module):
+           An MLP model that defines the architecture.
+       agg (partial):
+       swap_last_axes (bool):
+           Whether to swap between the last two axes, upon the forward pass. Default: True.
+
+    Examples:
+        >>> ds = DeepSets(5, 7, [3, 10, 2], True)
+        >>> ds
+        DeepSets(
+          (layers): Sequential(
+            (0): Linear(in_features=5, out_features=3, bias=True)
+            (1): LeakyReLU(negative_slope=0.01)
+            (2): Linear(in_features=3, out_features=10, bias=True)
+            (3): LeakyReLU(negative_slope=0.01)
+            (4): Linear(in_features=10, out_features=2, bias=True)
+            (5): LeakyReLU(negative_slope=0.01)
+            (6): Linear(in_features=2, out_features=7, bias=True)
+          )
+        )
      """
 
     def __init__(self, in_dim: int, out_dim: int, hidden_layers: Optional[list[int]] = None,
@@ -26,41 +60,6 @@ class DeepSets(nn.Module):
                  aggregation: Optional[str] = None,
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
                  device=torch.device('cpu'), dtype=torch.float64):
-        """
-        Args:
-            in_dim (int):
-                Size of each input sample.
-            out_dim (int):
-                Desired output dimension.
-            hidden_layers (list[int], Optional):
-                The width of each hidden layer. If None, then the MLP is equivalent to a linear layer. Default: None.
-            biases (bool, Iterable[bool], Optional):
-                When set to True, each linear layer learns an additive bias, and doesn't when set to False. Another
-                option is to specify for each hidden layer, by setting a boolean iterable. Default: True.
-            activation: (str, Optional):
-                Either one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', 'identity' or 'tanh'.
-                Default: 'leakyrelu'.
-            activation_constant: (float, Optional):
-                A tunable hyperparameter that some of the mentioned activation functions use. Neglected when irrelevant.
-                Default: 0.01.
-            device (str, torch.device, Optional): The device. Default: 'cpu'.
-            dtype (str, torch.dtype, Optional): The dtype. Default: torch.float64.
-
-        Examples:
-            >>> ds = DeepSets(5, 7, [3, 10, 2], True)
-            >>> ds
-            DeepSets(
-              (layers): Sequential(
-                (0): Linear(in_features=5, out_features=3, bias=True)
-                (1): LeakyReLU(negative_slope=0.01)
-                (2): Linear(in_features=3, out_features=10, bias=True)
-                (3): LeakyReLU(negative_slope=0.01)
-                (4): Linear(in_features=10, out_features=2, bias=True)
-                (5): LeakyReLU(negative_slope=0.01)
-                (6): Linear(in_features=2, out_features=7, bias=True)
-              )
-            )
-        """
         super(DeepSets, self).__init__()
         if new_dim:
             assert in_dim == 1

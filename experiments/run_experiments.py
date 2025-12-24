@@ -13,7 +13,7 @@ ANSATZES = {'bl': LightningBiLipschitzAntiSymmetricModel,
             'afanet': LightningAfaNetModel}
 
 
-def run_experiment(experiment: EXPERIMENTS, n_elements: int, dim: int, ansatz_name: str,
+def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                    embedding_dim: Optional[int] = None,
                    model_name: Optional[str] = 'mlp',
                    optimizer_kwargs: Optional[dict] = None,
@@ -23,7 +23,39 @@ def run_experiment(experiment: EXPERIMENTS, n_elements: int, dim: int, ansatz_na
                    shuffle: bool = True, n_workers: int = 0, pin_memory: bool = False,
                    persistent_workers: bool = False, device: str = 'cuda', dtype=torch.float64,
                    **ansatz_kwargs):
+    """
+    Run a single experiment with specified parameters.
+
+    Args:
+        experiment (str): Name of the experiment to run. Must be in EXPERIMENTS ('determinant', 'norm_cross_product_discontinuity', 'cross_product').
+        n_elements (int): Number of elements in the input set.
+        dim (int): Dimensionality of each element in the input set.
+        ansatz_name (str): Name of the ansatz to use. Must be one of the keys in ANSATZES ('bl', 'on', 'afanet').
+        embedding_dim (int, optional): Dimensionality of the embedding space. Default is None.
+        model_name (str, optional): Name of the model architecture to use. Default is 'mlp'.
+        optimizer_kwargs (dict, optional): Dictionary of optimizer parameters. Default is None.
+        lr_scheduler_kwargs (dict, optional): Dictionary of learning rate scheduler parameters. Default is None.
+        loss (str, optional): Loss function to use. Default is 'mse'.
+        extra_metrics (Iterable[str], optional): Additional metrics to compute during training. Default is None.
+        batch_size (int): Batch size for training. Default is 64.
+        shuffle (bool): Whether to shuffle the data. Default is True.
+        n_workers (int): Number of worker processes for data loading. Default is 0.
+        pin_memory (bool): Whether to pin memory during data loading. Default is False.
+        persistent_workers (bool): Whether to use persistent workers for data loading. Default is False.
+        device (str): Device to run the experiment on ('cuda' or 'cpu'). Default is 'cuda'.
+        dtype: Data type for tensors. Default is torch.float64.
+        ansatz_kwargs: Additional keyword arguments to pass to the ansatz constructor.
+
+    Examples:
+        >>> run_experiment('determinant', n_elements=15, dim=15, ansatz_name='bl', embedding_dim=16,
+                       model_name='mlp', optimizer_kwargs={'lr': 0.001}, batch_size=128, device='cuda')
+        # Runs the determinant experiment with a bi-Lipschitz antisymmetric ansatz on a 15x15 input set.
+
+        >>> run_experiment('cross_product', n_elements=10, dim=3, ansatz_name='on', embedding_dim=32,
+                       model_name='ds', optimizer_kwargs={'lr': 0.0005}, loss='l1', extra_metrics=['mse', 'mare'], device='cpu')
+    """
     assert ansatz_name in ANSATZES.keys()
+    assert experiment in EXPERIMENTS
     out_dim = 1 if experiment in ['determinant', 'norm_cross_product_discontinuity'] else 3
 
     ansatz = ANSATZES[ansatz_name](dim, n_elements, out_dim, embedding_dim, model_name,

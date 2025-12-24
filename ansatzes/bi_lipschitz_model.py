@@ -7,9 +7,26 @@ from ansatz_utils import get_model, random_negative_permutation, AnInvariantEmbe
 
 
 class BiLipschitzAntiSymmetricModel(nn.Module):
-    """
-    Anti-Symmetric model, that relies on a bi-Lipschitz An-invariant embedding followed by a standard model, as described in our work.
-    
+    """ Anti-Symmetric model, that relies on a bi-Lipschitz An-invariant embedding followed by a standard model, as described in our work.
+
+    Args:
+        in_dim (int):
+            Dimensionality of each element in the input set.
+        in_channels (int):
+            Number of elements in the input set.
+        out_dim (int):
+            Dimensionality of the output.
+        embedding_dim (int, optional):
+            Dimensionality of the embedding space. If None, it is set to (2 * in_dim * in_channels) + 1.
+        model_name (str, optional):
+            Name of the model architecture to use (e.g., 'mlp', 'ds' for DeepSets). Default is 'mlp'.
+        device (Optional):
+            Device to run the model on. Default is CPU.
+        dtype (Optional):
+            Data type to use. Default is torch.float64.
+        **model_kwargs:
+            Additional keyword arguments for the model.
+
     Attributes:
         tau (Tensor):
             A random negative permutation.
@@ -21,25 +38,6 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  model_name: Optional[str] = 'mlp',
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **model_kwargs):
-        """
-        Args:
-            in_dim (int):
-                The input dimension.
-            in_channels (int):
-                The number of input channels.
-            out_dim (int):
-                The output dimension.
-            embedding_dim (Optional[int]):
-                The dimension of the embedding. If None, it is computed as (2 * in_dim * in_channels) + 1.
-            model_name (Optional[str]):
-                The name of the model to use. Default is 'mlp'.
-            device (Optional):
-                The device to use. Default is CPU.
-            dtype (Optional):
-                The data type to use. Default is torch.float64.
-            model_kwargs:
-                Additional keyword arguments for the model.
-        """
         super(BiLipschitzAntiSymmetricModel, self).__init__()
         if embedding_dim is None:
             embedding_dim = (2 * in_dim * in_channels) + 1

@@ -31,30 +31,30 @@ def weight_by_alternation_separation(x: Tensor) -> Tensor:
 
 
 class ProjectiveSorting(nn.Module):
-    """ The class constructs a layer of Alternation-Invariant functions of the form [sort(a*X), Q(a*X)]
-        where Q(X*a) = prod{sign(a*(X_j - X_i)): i < j} *  min{a*(X_j - X_i): i < j}.
-        The input is (batched) d x n matrices, and the output is (a batch of) m x n+1 matrices.
+    """ 
+    The class constructs a layer of Alternation-Invariant functions of the form [sort(a*X), Q(a*X)]
+    where Q(X*a) = prod{sign(a*(X_j - X_i)): i < j} *  min{a*(X_j - X_i): i < j}.
+    The input is (batched) d x n matrices, and the output is (a batch of) m x n+1 matrices.
 
-        Attributes:
-            spatial_projector (Parameter):
-                a matrix of m d-dimensional parameters.
+    Args:
+        in_dim (int):
+            spatial dimension (denoted above by d).
+        projection_dim (int):
+            number of projecting vectors to define (denoted above by m).
+
+    Attributes:
+        spatial_projector (Parameter):
+            a matrix of m d-dimensional parameters.
+
+    Examples:
+        >>> b, d, n = 10, 3, 5
+        >>> X = torch.randn(b, d, n)
+        >>> m = 2 * d * n + 1
+        >>> ps = ProjectiveSorting(d, m)
+        >>> projected_x, signs, sorted_x = ps(X)
     """
 
     def __init__(self, in_dim: int, projection_dim: int):
-        """
-        Args:
-            in_dim (int):
-                spatial dimension (denoted above by d).
-            projection_dim (int):
-                number of projecting vectors to define (denoted above by m).
-
-        Examples:
-            >>> b, d, n = 10, 3, 5
-            >>> X = torch.randn(b, d, n)
-            >>> m = 2 * d * n + 1
-            >>> ps = ProjectiveSorting(d, m)
-            >>> projected_x, signs, sorted_x = ps(X)
-        """
         super(ProjectiveSorting, self).__init__()
         self.spatial_projector = nn.Parameter(torch.empty(projection_dim, in_dim))
         self.reset_parameters()
@@ -96,32 +96,32 @@ class ProjectiveSorting(nn.Module):
 
 
 class AnInvariantEmbedding(nn.Module):
-    """ The class constructs a layer of Alternation-Invariant functions of the form ψ(X; a, b) = [sort(a*X), Q(a*X)]*b
-        where Q(X*a) = prod{sign(a*(X_j - X_i)): i < j} *  min{a*(X_j - X_i): i < j}.
-        The input is (batched) d x n matrices, and the output is (a batch of) m scalars.
+    """ 
+    The class constructs a layer of Alternation-Invariant functions of the form ψ(X; a, b) = [sort(a*X), Q(a*X)]*b
+    where Q(X*a) = prod{sign(a*(X_j - X_i)): i < j} *  min{a*(X_j - X_i): i < j}.
+    The input is (batched) d x n matrices, and the output is (a batch of) m scalars.
 
-        Attributes:
-            channel_projection (Parameter):
-                a matrix of m (n+1)-dimensional parameters.
+    Args:
+        in_dim (int):
+            spatial dimension (denoted above by d).
+        in_channels (int):
+             number of points to consider (denoted above by n).
+        embedding_dim (int):
+            number of projecting vectors to define (denoted above by m).
+
+    Attributes:
+        channel_projection (Parameter):
+            a matrix of m (n+1)-dimensional parameters.
+
+    Examples:
+        >>> b, d, n = 10, 3, 5
+        >>> X = torch.randn(b, d, n)
+        >>> m = 2 * d * n + 1
+        >>> an_embedding = AnInvariantEmbedding(d, n, m)
+        >>> projected_x = an_embedding(X)
     """
 
     def __init__(self, in_dim: int, in_channels: int, embedding_dim: int):
-        """
-        Args:
-            in_dim (int):
-                spatial dimension (denoted above by d).
-            in_channels (int):
-                 number of points to consider (denoted above by n).
-            embedding_dim (int):
-                number of projecting vectors to define (denoted above by m).
-
-        Examples:
-            >>> b, d, n = 10, 3, 5
-            >>> X = torch.randn(b, d, n)
-            >>> m = 2 * d * n + 1
-            >>> an_embedding = AnInvariantEmbedding(d, n, m)
-            >>> projected_x = an_embedding(X)
-        """
         super(AnInvariantEmbedding, self).__init__()
         self.channel_projection = nn.Parameter(torch.empty(embedding_dim, in_channels + 1))
         self.projection_sorting = ProjectiveSorting(in_dim, embedding_dim)

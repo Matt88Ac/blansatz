@@ -13,17 +13,20 @@ from ansatz_utils import all_transpositions, ProjectiveSorting, alternation_sepa
 class AsWeightedFrame(nn.Module):
     """
     This class implements a weighted frame averaging of a given function over a set of projective frames, as described in our work.
+
+    Args:
+        in_dim (int):
+            The input dimension of the function to be framed.
+        n_frames (int):
+            The number of frames to use.
+
     Attributes:
         projection_sorting (ProjectiveSorting): 
             An instance of the ProjectiveSorting class to compute weights and signs for the frames.
     """
     def __init__(self, in_dim: int, n_frames: int):
         """
-        Args:
-            in_dim (int):
-                The input dimension of the function to be framed.
-            n_frames (int):
-                The number of frames to use.
+        
         """
         super(AsWeightedFrame, self).__init__()
         self.projection_sorting = ProjectiveSorting(in_dim, n_frames)
@@ -77,6 +80,22 @@ class AsWeightedFrame(nn.Module):
 class WeakStabilizeWeightedFrame(nn.Module):
     """
     This class implements a general framework for weakly-stabilizing weighted frame averaging of a given unstable function.
+    Args:
+         unstable_function (nn.Module):
+             The unstable function to be stabilized.
+         in_dim (int):
+             The input dimension of the function.
+         in_channels (int):
+             The number of input channels.
+         n_frames (int):
+             The number of frames to use.
+         an_invariant (bool, optional):
+             Whether the function is An-invariant or not. Default is False.
+         device (Optional):
+             The device to use. Default is CPU.
+         dtype (Optional):
+             The data type to use. Default is torch.float64.
+
     Attributes:
         weighted_frame (AsWeightedFrame): 
             An instance of the AsWeightedFrame class to perform weighted frame averaging.
@@ -86,37 +105,19 @@ class WeakStabilizeWeightedFrame(nn.Module):
             The unstable function to be stabilized.
         an_invariant (bool): 
             Whether the function is An-invariant or not.
+
+    Example:
+        >>> b, d, n = 1, 3, 13
+        >>> F = nn.Sequential(nn.Flatten(-2, -1), MLP(n * d, 1, [20, 20, 20]))
+        >>> X = torch.rand(b, d, n, dtype=torch.float64)
+        >>> X[0, :, 0] = X[0, :, 3]
+        >>> SF = NonLinearWeightedFrame(F, d, n, 130, an_invariant=True)
+        >>> SF(X)
+        tensor([[0.0]], dtype=torch.float64)
     """
     def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
                  an_invariant: bool = False,
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
-        """
-        Args:
-            unstable_function (nn.Module):
-                The unstable function to be stabilized.
-            in_dim (int):
-                The input dimension of the function.
-            in_channels (int):
-                The number of input channels.
-            n_frames (int):
-                The number of frames to use.
-            an_invariant (bool):
-                Whether the function is An-invariant or not. Default is False.
-            device (Optional):
-                The device to use. Default is CPU.
-            dtype (Optional):
-                The data type to use. Default is torch.float64.
-
-        Example:
-            >>> b, d, n = 1, 3, 13
-            >>> F = nn.Sequential(nn.Flatten(-2, -1), MLP(n * d, 1, [20, 20, 20]))
-            >>> X = torch.rand(b, d, n, dtype=torch.float64)
-            >>> X[0, :, 0] = X[0, :, 3]
-            >>> SF = NonLinearWeightedFrame(F, d, n, 130, an_invariant=True)
-            >>> SF(X)
-            tensor([[0.0]], dtype=torch.float64)
-
-        """
         super(WeakStabilizeWeightedFrame, self).__init__()
         self.weighted_frame = AsWeightedFrame(in_dim, n_frames).to(device=device, dtype=dtype)
         self.transpositions = all_transpositions(in_channels, device=device)
@@ -154,27 +155,25 @@ class WeakStabilizeWeightedFrame(nn.Module):
 class NonLinearWeightedFrame(WeakStabilizeWeightedFrame):
     """
     This class implements a non-linear weakly-stabilizing weighted frame averaging, as described in our work.
+    Args:
+        unstable_function (nn.Module):
+            The unstable function to be stabilized.
+        in_dim (int):
+            The input dimension of the function.
+        in_channels (int):
+            The number of input channels.
+        n_frames (int):
+            The number of frames to use.
+        an_invariant (bool, optional):
+            Whether the function is An-invariant or not. Default is False.
+        device (Optional):
+            The device to use. Default is CPU.
+        dtype (Optional):
+            The data type to use. Default is torch.float64.
     """
     def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
                  an_invariant: bool = False,
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
-        """
-        Args:
-            unstable_function (nn.Module):
-                The unstable function to be stabilized.
-            in_dim (int):
-                The input dimension of the function.
-            in_channels (int):
-                The number of input channels.
-            n_frames (int):
-                The number of frames to use.
-            an_invariant (bool):
-                Whether the function is An-invariant or not. Default is False.
-            device (Optional):
-                The device to use. Default is CPU.
-            dtype (Optional):
-                The data type to use. Default is torch.float64.
-        """
         super(NonLinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
                                                      device, dtype)
 
@@ -208,30 +207,28 @@ class NonLinearWeightedFrame(WeakStabilizeWeightedFrame):
 class LinearWeightedFrame(WeakStabilizeWeightedFrame):
     """
     This class implements a linear weakly-stabilizing weighted frame averaging, as described in our work.
+    Args:
+        unstable_function (nn.Module):
+            The unstable function to be stabilized.
+        in_dim (int):
+            The input dimension of the function.
+        in_channels (int):
+            The number of input channels.
+        n_frames (int):
+            The number of frames to use.
+        an_invariant (bool, optional):
+            Whether the function is An-invariant or not. Default is False.
+        p_norm (Union[str, int]):
+            The p-norm to use for sub-weight calculation. Default is 'fro'.
+        device (Optional):
+            The device to use. Default is CPU.
+        dtype (Optional):
+            The data type to use. Default is torch.float64.
     """
     def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
                  an_invariant: bool = False,
                  p_norm: Union[str, int] = 'fro',
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
-        """
-        Args:
-            unstable_function (nn.Module):
-                The unstable function to be stabilized.
-            in_dim (int):
-                The input dimension of the function.
-            in_channels (int):
-                The number of input channels.
-            n_frames (int):
-                The number of frames to use.
-            an_invariant (bool):
-                Whether the function is An-invariant or not. Default is False.
-            p_norm (Union[str, int]):
-                The p-norm to use for sub-weight calculation. Default is 'fro'.
-            device (Optional):
-                The device to use. Default is CPU.
-            dtype (Optional):
-                The data type to use. Default is torch.float64.
-        """
         super(LinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
                                                   device, dtype)
         self.p_norm = p_norm

@@ -13,6 +13,22 @@ def only_max(x: Tensor, dim: Union[int, Iterable[int]], keepdims: bool = True) -
 
 
 def get_aggregation(agg_name: str, dim: Union[int, Iterable[int]], keepdims: bool = True) -> Union[partial]:
+    """
+    Get aggregation function by name.
+    Args:
+        agg_name (str): Name of the aggregation function. One of 'sum', 'avg'/'average'/'mean', 'prod', 'max', 'min'.
+        dim (int or Iterable[int]): Dimension(s) along which to aggregate.
+        keepdims (bool, optional): Whether to keep the reduced dimensions. Default is True.
+
+    Returns:
+        partial: Partial function of the selected aggregation.
+
+    Raises:
+        NotImplementedError: If the aggregation function is not implemented, or the name is invalid (should be one of 'sum', 'avg', 'average', 'mean', 'prod', 'max', 'min').
+
+    Examples:
+        >>> agg = get_aggregation('sum', dim=1, keepdims=False)
+    """
     if agg_name.lower() == 'sum':
         return partial(sum, dim=dim, keepdims=keepdims)
 

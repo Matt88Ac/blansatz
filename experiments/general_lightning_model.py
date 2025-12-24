@@ -13,6 +13,18 @@ class GeneralTrainer(LightningModule):
     A general PyTorch Lightning trainer for different models. It supports customizable optimizers, learning rate schedulers,
     loss functions, and additional metrics. The model architecture is defined by the provided ansatz parameters.
 
+    Args:
+        in_dim (int): Input dimension.
+        in_channels (int): Number of input channels.
+        out_dim (int): Output dimension.
+        embedding_dim (int, optional): Dimension of the embedding layer. Defaults to None, and dealt with in the ansatz.
+        model_name (str, optional): Name of the model architecture to use. Defaults to 'mlp'.
+        optimizer_kwargs (dict, optional): Dictionary of optimizer parameters. 
+        lr_scheduler_kwargs (dict, optional): Dictionary of learning rate scheduler parameters.
+        loss (str, optional): Loss function to use. Defaults to 'mse'.
+        extra_metrics (Iterable[str], optional): Additional metrics to compute during training and evaluation. Defaults to None.
+        ansatz_kwargs: Additional keyword arguments for the model ansatz.
+
     Attributes:
         model (torch.nn.Module): The antisymmetric neural network model to be trained.
         model_name (str): Name of the model architecture.
@@ -28,20 +40,6 @@ class GeneralTrainer(LightningModule):
                  lr_scheduler_kwargs: Optional[dict] = None, loss: Optional[str] = 'mse',
                  extra_metrics: Optional[Iterable[str]] = None,
                  **ansatz_kwargs):
-        """
-        Args:
-            in_dim (int): Input dimension.
-            in_channels (int): Number of input channels.
-            out_dim (int): Output dimension.
-            embedding_dim (Optional[int]): Dimension of the embedding layer. Defaults to None, and dealt with in the ansatz.
-            model_name (Optional[str]): Name of the model architecture to use. Defaults to 'mlp'.
-            optimizer_kwargs (Optional[dict]): Dictionary of optimizer parameters. 
-            lr_scheduler_kwargs (Optional[dict]): Dictionary of learning rate scheduler parameters.
-            loss (Optional[str]): Loss function to use. Defaults to 'mse'.
-            extra_metrics (Optional[Iterable[str]]): Additional metrics to compute during training and evaluation. Defaults to None.
-            ansatz_kwargs: Additional keyword arguments for the model ansatz.
-        """
-
         super(GeneralTrainer, self).__init__()
         self.save_hyperparameters()
         if extra_metrics is None:
