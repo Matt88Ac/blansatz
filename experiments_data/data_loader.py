@@ -49,10 +49,8 @@ class ExperimentDataset(Dataset):
         return self.n_files
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
-        matrix = np.load(self.dir + f'matrix_{idx}.npy')
-        target = np.load(self.dir + f'res_{idx}.npy')
-        matrix = torch.tensor(matrix, dtype=self.dtype, device=self.device)
-        target = torch.tensor(target, dtype=self.dtype, device=self.device)
+        matrix = torch.tensor(np.load(self.dir + f'matrix_{idx}.npy'), dtype=self.dtype, device=self.device)
+        target = torch.tensor(np.load(self.dir + f'res_{idx}.npy'), dtype=self.dtype, device=self.device)
         if target.dim() == 1:
             target = target.unsqueeze(0)
 
@@ -98,12 +96,12 @@ class ExperimentLightningDataModule(LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
-                          shuffle=self.shuffle, num_workers=self.n_workers,
+                          num_workers=self.n_workers,
                           pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
-                          shuffle=self.shuffle, num_workers=self.n_workers,
+                          num_workers=self.n_workers,
                           pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
 
 
