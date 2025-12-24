@@ -17,6 +17,18 @@ EXPERIMENTS = {
 def generate_datasets(experiment: str, n_elements: int, dim: int,
                       n_train: int = 100_000, n_val: int = 10_000, n_test: int = 20_000,
                       lower: float = -1.5, upper: float = 1.5):
+    """
+    Generates datasets for a given experiment and saves them to disk.
+    Args:
+        experiment (str): The name of the experiment to generate data for. Options are 'determinant', 'cross_product', and 'norm_cross_product_discontinuity'.
+        n_elements (int): The number of elements in each input sample.
+        dim (int): The dimensionality of each input sample.
+        n_train (int, optional): Number of training samples to generate. Defaults to 100,000.
+        n_val (int, optional): Number of validation samples to generate. Defaults to 10,000.
+        n_test (int, optional): Number of test samples to generate. Defaults to 20,000.
+        lower (float, optional): Lower bound for input values. Defaults to -1.5.
+        upper (float, optional): Upper bound for input values. Defaults to 1.5.
+    """
     if n_test is None:
         n_test = n_val
 
