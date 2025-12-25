@@ -85,7 +85,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         save_last=True,
     )
 
-    call_backs = [checkpoint, callbacks.LearningRateMonitor(), callbacks.TQDMProgressBar(leave=False)]
+    call_backs = [checkpoint, callbacks.LearningRateMonitor(), callbacks.TQDMProgressBar(leave=True)]
     if early_stopping:
         call_backs.append(
             callbacks.EarlyStopping('val_loss', early_stopping_min_delta, early_stopping_patience,
