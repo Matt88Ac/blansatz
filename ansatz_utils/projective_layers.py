@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from ansatz_utils import vectorized_permutation_sign
+from ansatz_utils import vectorized_permutation_sign, AllDifferences
 
 
 def alternation_separation(sorted_x: Tensor) -> Tensor:
@@ -72,23 +72,20 @@ class ProjectiveSorting(nn.Module):
             - the signs of the permutations which the projection of x is sorted according to.
             - the permuted input x, according to each of the permutations mentioned in the latter.
         """
-        projected_x, permutations = torch.sort(
-            nn.functional.linear(x.swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1),
-            stable=True, dim=-1)
+        projected_x = nn.functional.linear(x.swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1)
+        sorted_proj_x, permutations = torch.sort(projected_x.clone(), stable=True, dim=-1)
+        diff_proj_x = AllDifferences.apply(projected_x)
 
-        out_x = x.clone().unsqueeze(1)
-        permutations: Tensor = permutations.unsqueeze(-2)
-        out_x = torch.take_along_dim(out_x.requires_grad_(True), permutations, -1)
+        out_x = torch.take_along_dim(x.clone().unsqueeze(1).requires_grad_(True), permutations.unsqueeze(-2), -1)
 
-        permutations = vectorized_permutation_sign(permutations)
+        # permutations = vectorized_permutation_sign(permutations)
 
         """
         for i in range(len(signs)):
             for j in range(signs.size(1)):
                 assert signs[i, j] == permutation_sign(permutations[i, j])
         """
-
-        return projected_x, permutations, out_x
+        return diff_proj_x, sorted_proj_x, out_x
 
     @property
     def weights(self):
@@ -133,12 +130,14 @@ class AnInvariantEmbedding(nn.Module):
         nn.init.xavier_uniform_(self.channel_projection)
 
     def forward(self, x: Tensor) -> Tensor:
-        projected_x, signs, sorted_x = self.projection_sorting(x)
-        del sorted_x
-        projected_x = torch.cat([projected_x, signs * alternation_separation(projected_x)], dim=-1)
-        *size, M, N = projected_x.shape
-        size = [1]*len(size)
-        return (self.channel_projection.view(*size, M, N) * projected_x).sum(dim=-1)
+        # projected_x, signs, sorted_x = self.projection_sorting(x)
+        diff_proj_x, sorted_proj_x, out_x = self.projection_sorting(x)
+        out_x = torch.cat([sorted_proj_x,
+                           diff_proj_x.sign().prod(dim=-1, keepdim=True) * diff_proj_x.abs().min(dim=-1, keepdim=True)[
+                               0]], dim=-1)
+        *size, M, N = out_x.shape
+        size = [1] * len(size)
+        return (self.channel_projection.view(*size, M, N) * out_x).sum(dim=-1)
 
 
 if __name__ == '__main__':
