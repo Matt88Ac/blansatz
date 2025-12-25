@@ -2,7 +2,7 @@ from typing import Optional, Union, Iterable
 
 import torch
 from torch import nn
-from .activations import get_activation
+
 from .aggregations import get_aggregation, partial
 from .mlp import MLP
 
