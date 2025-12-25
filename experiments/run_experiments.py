@@ -5,12 +5,14 @@ import torch
 from pytorch_lightning import callbacks, Trainer
 from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 
-from experiments import LightningOnVandermondeModel, LightningBiLipschitzAntiSymmetricModel, LightningAfaNetModel
+from experiments import (LightningOnVandermondeModel, LightningBiLipschitzAntiSymmetricModel,
+                         LightningAfaNetModel, LightningNoneAsModel)
 from experiments_data import ExperimentLightningDataModule, EXPERIMENTS
 
 ANSATZES = {'bl': LightningBiLipschitzAntiSymmetricModel,
             'on': LightningOnVandermondeModel,
-            'afanet': LightningAfaNetModel}
+            'afanet': LightningAfaNetModel,
+            'none': LightningNoneAsModel}
 
 
 def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
@@ -35,7 +37,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         experiment (str): Name of the experiment to run. Must be in EXPERIMENTS ('determinant', 'norm_cross_product_discontinuity', 'cross_product').
         n_elements (int): Number of elements in the input set.
         dim (int): Dimensionality of each element in the input set.
-        ansatz_name (str): Name of the ansatz to use. Must be one of the keys in ANSATZES ('bl', 'on', 'afanet').
+        ansatz_name (str): Name of the ansatz to use. Must be one of the keys in ANSATZES ('bl', 'on', 'afanet', 'none').
         embedding_dim (int, optional): Dimensionality of the embedding space. Default is None.
         model_name (str, optional): Name of the model architecture to use. Default is 'mlp'.
         max_epochs (int, optional): Maximum number of training epochs. Default is 100.
