@@ -60,6 +60,3 @@ def run_analysis(experiment: str, n_elements: int, dim: int, figsize: tuple = (1
     plt.suptitle(fr'${n_elements} \times {dim}$ {experiment} analysis')
     plt.tight_layout()
     plt.show()
-
-
-run_analysis('determinant', 10, 10)
