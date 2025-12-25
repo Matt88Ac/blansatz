@@ -75,10 +75,10 @@ class OnVandermondeModel(nn.Module):
         self.single_model = single_model
         if single_model:
             model_kwargs['out_dim'] = out_dim * embedding_dim
-            self.model = get_model('ds', **model_kwargs)
+            self.model = get_model(model_name, **model_kwargs)
         else:
             model_kwargs['out_dim'] = out_dim
-            self.model_list = nn.ModuleList([get_model('ds', **model_kwargs) for i in range(embedding_dim)])
+            self.model_list = nn.ModuleList([get_model(model_name, **model_kwargs) for i in range(embedding_dim)])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         *shape, d, n = x.shape
@@ -104,8 +104,17 @@ class OnVandermondeModel(nn.Module):
 
 if __name__ == '__main__':
     b, d, n = 10, 3, 15
-    model = OnVandermondeModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', aggregation='max', single_model=False)
+    from ansatz_utils import random_negative_permutation
+    model = OnVandermondeModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', aggregation='max',
+                               model_name='transformer',
+                               single_model=False)
 
-    temp = torch.rand(b, d, n, dtype=torch.float64, device='cpu') * 10
+    for i in range(100):
+        X = torch.rand(b, d, n, dtype=torch.float64, device='cpu') * 10
+        rand_x = X[..., random_negative_permutation(n)]
+        rand_x = rand_x[..., random_negative_permutation(n)]
+        assert torch.allclose(model(X), model(rand_x))
+        rand_x = X[..., random_negative_permutation(n)]
+        assert torch.allclose(model(X), -model(rand_x))
 
-    print(model(temp).shape)
+    print(model(X).shape)
