@@ -2,8 +2,9 @@ import argparse
 
 import torch
 from experiments import run_experiments
-
 from experiments_data import generate_datasets
+
+import json
 
 
 def parse_to_generate(parsed_args):
@@ -41,11 +42,17 @@ def parser_def():
                         help='Dimensionality of the embedding space.')
     parser.add_argument('--model_name', type=str, required=False, default='mlp',
                         help='Name of the model architecture to use. Must be one of ("mlp", "deepsets", "attention").')
-    parser.add_argument('--optimizer_kwargs', type=dict, required=False, default={'optimizer': 'adam', 'lr': 1e-3},
+
+    parser.add_argument('--optimizer_kwargs',
+                        type=lambda _t: json.loads(_t.replace("'", '"')),
+                        required=False, default="{'optimizer': 'adam', 'lr': 1e-3}",
                         help='Dictionary of optimizer parameters, e.g., {"optimizer": "adam", "lr": 0.001}.')
-    parser.add_argument('--lr_scheduler_kwargs', type=dict, required=False,
-                        default={'lr_scheduler': 'reduce', 'factor': 0.3, 'patience': 0, 'min_lr': 1e-6},
+    parser.add_argument('--lr_scheduler_kwargs',
+                        type=lambda _t: json.loads(_t.replace("'", '"')),
+                        required=False,
+                        default="{'lr_scheduler': 'reduce', 'factor': 0.3, 'patience': 0, 'min_lr': 1e-6}",
                         help='Dictionary of learning rate scheduler parameters, e.g., {"lr_scheduler": "reduce", "factor": 0.3, "min_lr": 1e-6}.')
+
     parser.add_argument('--loss', type=str, required=False, default='mse', help='Loss function to use (mse, l1, etc.).')
     parser.add_argument('--extra_metrics', type=list, required=False, default=['mse', 'l1', 'mare'],
                         help='Additional metrics to compute during training (list of strings).')
@@ -69,8 +76,12 @@ def parser_def():
                         help='Device to run the experiment on (cuda or cpu).')
     parser.add_argument('--dtype', type=str, required=False, default='float64',
                         help='Data type for tensors (float32 or float64).')
-    parser.add_argument('--ansatz_kwargs', type=dict, required=False, default={},
+
+    parser.add_argument('--ansatz_kwargs',
+                        type=lambda _t: json.loads(_t.replace("'", '"')),
+                        required=False, default='{}',
                         help='Additional keyword arguments to pass to the ansatz constructor.')
+
     parser.add_argument('--run_generate_datasets', action='store_true',
                         help='If set, generate datasets instead of running an experiment.')
     parser.add_argument('--generate_lower', type=float, required=False, default=-1.0,
@@ -97,6 +108,7 @@ def main():
 
 
 if __name__ == '__main__':
+    # J = '{"an_invariant": false, "frame_name": "nonlinear", "hidden_layers": [128, 128, 128], "activation": "tanh", "biases": "all_but_last"}'
     main()
     exit(0)
     # generate_datasets('determinant', 2, 2, 100_000, 10_000, 10_000)
