@@ -5,7 +5,8 @@ import torch
 from pytorch_lightning import LightningModule
 
 from ansatzes import AfaNetModel, BiLipschitzAntiSymmetricModel, OnVandermondeModel
-from .experiment_utils import (get_loss, get_optimizer, get_lr_scheduler)
+from experiments import (get_loss, get_optimizer, get_lr_scheduler)
+from ansatz_utils import get_model
 
 
 class GeneralTrainer(LightningModule):
@@ -34,6 +35,7 @@ class GeneralTrainer(LightningModule):
         optim (callable): Optimizer function.
         lr_sched (callable): Learning rate scheduler function.
     """
+
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  model_name: Optional[str] = 'mlp',
                  optimizer_kwargs: Optional[dict] = None,
@@ -173,6 +175,7 @@ class LightningOnVandermondeModel(GeneralTrainer):
     """
     Lightning wrapper for OnVandermondeModel.
     """
+
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  model_name: Optional[str] = 'ds',
                  optimizer_kwargs: Optional[dict] = None,
@@ -191,3 +194,30 @@ class LightningOnVandermondeModel(GeneralTrainer):
 
         self.model = OnVandermondeModel(**self.ansatz_kwargs)
         self.model_name = f'on_{trainable_weights}_{single_model}_{self.model_size}_' + self.model_name
+
+
+class LightningNoneAsModel(GeneralTrainer):
+    """
+    Lightning wrapper for none antisymmetric models (e.g, MLP).
+    """
+
+    def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
+                 model_name: Optional[str] = 'mlp',
+                 optimizer_kwargs: Optional[dict] = None,
+                 lr_scheduler_kwargs: Optional[dict] = None, loss: Optional[str] = 'mse',
+                 extra_metrics: Optional[Iterable[str]] = None,
+                 **ansatz_kwargs):
+        super(LightningNoneAsModel, self).__init__(in_dim, in_channels, out_dim, embedding_dim,
+                                                   model_name,
+                                                   optimizer_kwargs, lr_scheduler_kwargs, loss,
+                                                   extra_metrics,
+                                                   **ansatz_kwargs)
+
+        self.ansatz_kwargs.pop('in_channels')
+        self.ansatz_kwargs.pop('embedding_dim')
+        if model_name.lower() == 'mlp':
+            self.ansatz_kwargs['in_dim'] *= in_channels
+            self.model = torch.nn.Sequential(torch.nn.Flatten(-2, -1), get_model(**self.ansatz_kwargs))
+
+        else:
+            self.model = get_model(**self.ansatz_kwargs)
