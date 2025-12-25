@@ -87,6 +87,8 @@ class Transformer(nn.Module):
             Size of each input sample.
         out_dim (int):
             Desired output dimension.
+        in_channels (int, optional):
+            Number of input channels. If None, then the model will be Sn-equivariant.
         num_heads (int, optional):
             Number of attention heads. Must be divisible by in_dim, and >= 1. Default: 1.
         hidden_layers (list[int], optional):
@@ -121,7 +123,7 @@ class Transformer(nn.Module):
             The aggregation module to obtain the final output.
     """
 
-    def __init__(self, in_dim: int, out_dim: int,
+    def __init__(self, in_dim: int, out_dim: int, in_channels: Optional[int] = None,
                  num_heads: Optional[int] = 1,
                  hidden_layers: Optional[list[int]] = None,
                  biases: Optional[Union[bool, Iterable[bool], str]] = True,
@@ -129,6 +131,9 @@ class Transformer(nn.Module):
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
                  device=torch.device('cpu'), dtype=torch.float64, **kwargs):
         super(Transformer, self).__init__()
+
+        if in_channels is None:
+            assert aggregation != 'linear'
 
         if hidden_layers is None:
             hidden_layers = []
@@ -157,7 +162,7 @@ class Transformer(nn.Module):
         if aggregation.lower() == 'linear':
             self.agg = nn.Sequential(
                 get_activation(activation, activation_constant),
-                nn.LazyLinear(1, bias=biases[-1], device=device, dtype=dtype))
+                nn.Linear(in_channels, 1, bias=biases[-1], device=device, dtype=dtype))
 
         else:
             self.agg = get_aggregation(aggregation.lower(), -1, True)

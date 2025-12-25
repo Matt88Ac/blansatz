@@ -36,6 +36,7 @@ class DeepSets(nn.Module):
             Default: 0.01.
         device (str, torch.device, Optional): The device. Default: 'cpu'.
         dtype (str, torch.dtype, Optional): The dtype. Default: torch.float64.
+        kwargs: Additional arguments (not used).
     
     Attributes:
        mlp (nn.Module):
@@ -67,7 +68,7 @@ class DeepSets(nn.Module):
                  swap_last_axes: Optional[bool] = True,
                  aggregation: Optional[str] = 'mean',
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
-                 device=torch.device('cpu'), dtype=torch.float64):
+                 device=torch.device('cpu'), dtype=torch.float64, **kwargs):
         super(DeepSets, self).__init__()
         if new_dim:
             assert in_dim == 1

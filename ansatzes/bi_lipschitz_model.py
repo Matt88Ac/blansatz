@@ -46,6 +46,7 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
         model_kwargs['out_dim'] = out_dim
         model_kwargs['device'] = device
         model_kwargs['dtype'] = dtype
+        model_kwargs['in_channels'] = in_channels
 
         if model_name in ['ds', 'deepsets', 'deepset']:
             model_kwargs['new_dim'] = True

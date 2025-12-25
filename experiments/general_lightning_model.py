@@ -220,4 +220,8 @@ class LightningNoneAsModel(GeneralTrainer):
             self.model = torch.nn.Sequential(torch.nn.Flatten(-2, -1), get_model(**self.ansatz_kwargs))
 
         else:
+            if model_name.lower() in ['attention', 'transformer']:
+                self.ansatz_kwargs['in_channels'] = in_channels
             self.model = get_model(**self.ansatz_kwargs)
+
+        self.model_name = f'none_{self.model_size}_' + self.model_name

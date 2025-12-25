@@ -27,6 +27,7 @@ class MLP(nn.Module):
             Default: 0.01.
         device (str, torch.device, Optional): The device. Default: 'cpu'.
         dtype (str, torch.dtype, Optional): The dtype. Default: torch.float64.
+        kwargs: Additional arguments (not used).
 
     Attributes:
         in_dim (int):
@@ -55,7 +56,7 @@ class MLP(nn.Module):
     def __init__(self, in_dim: int, out_dim: int, hidden_layers: Optional[list[int]] = None,
                  biases: Optional[Union[bool, Iterable[bool], str]] = True,
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
-                 device=torch.device('cpu'), dtype=torch.float64):
+                 device=torch.device('cpu'), dtype=torch.float64, **kwargs):
         super(MLP, self).__init__()
         if hidden_layers is None:
             hidden_layers = []

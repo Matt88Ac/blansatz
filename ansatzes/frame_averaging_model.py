@@ -58,6 +58,7 @@ class AfaNetModel(nn.Module):
             model_kwargs['out_dim'] = out_dim
             model_kwargs['device'] = device
             model_kwargs['dtype'] = dtype
+            model_kwargs['in_channels'] = in_channels
             if flatten:
                 model_kwargs['in_dim'] *= in_channels
                 unstable_model = nn.Sequential(nn.Flatten(-2, -1), get_model(model_name, **model_kwargs))
