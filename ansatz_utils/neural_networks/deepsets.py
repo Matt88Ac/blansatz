@@ -27,7 +27,7 @@ class DeepSets(nn.Module):
         swap_last_axes (bool, Optional):
             Whether to swap between the last two axes, upon the forward pass. Default: True.
         aggregation (str, Optional):
-            Either one of 'mean', 'sum', 'max', 'min' or None. If None, no aggregation is performed. Default: 'mean'.
+            Either one of 'mean', 'sum', 'max', 'min' or 'prod'. Default: 'mean'.
         activation: (str, Optional):
             Either one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', 'identity' or 'tanh'.
             Default: 'leakyrelu'.
@@ -75,14 +75,11 @@ class DeepSets(nn.Module):
         self.mlp = MLP(in_dim, out_dim, hidden_layers, biases, activation, activation_constant, device, dtype)
         self.new_dim = new_dim
         self.swap_last_axes = swap_last_axes
-        if aggregation is None:
-            self.agg = nn.Identity()
-        else:
-            self.agg = get_aggregation(
-                agg_name=aggregation,
-                dim=-2,
-                keepdims=False
-            )
+        self.agg = get_aggregation(
+            agg_name=aggregation,
+            dim=-2,
+            keepdims=False
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.new_dim:
