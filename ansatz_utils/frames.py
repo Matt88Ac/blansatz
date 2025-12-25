@@ -48,19 +48,24 @@ class AsWeightedFrame(nn.Module):
             Tensor: The weighted frame averaged output.
         """
 
-        weights, signs, sorted_x = self.projection_sorting(x)
-        weights = alternation_separation(weights)
+        diff_proj_x, sorted_proj_x, out_x = self.projection_sorting(x)
+        del sorted_proj_x
+        signs = diff_proj_x.sign().prod(dim=-1, keepdim=True).clone()
+        weights = diff_proj_x.abs().min(dim=-1, keepdim=True)[0]
         if not an_invariant:
-            framed_func = ((weights * signs) * ws_function(sorted_x)).sum(dim=1)
+            ws = ws_function(out_x)
+            framed_func = ((weights * signs) * ws_function(out_x)).sum(dim=1)
         else:
             neg_pem = random_negative_permutation(x.shape[-1], x.device)
             framed_func = torch.where(signs == 1,
-                                      weights * ws_function(sorted_x, x),
+                                      weights * ws_function(out_x, x),
                                       0) - torch.where(signs == -1,
-                                                       weights * ws_function(sorted_x, x[..., neg_pem]),
+                                                       weights * ws_function(out_x, x[..., neg_pem]),
                                                        0)
             framed_func = framed_func.sum(dim=1)
-        framed_func = torch.where(framed_func != 0, framed_func / weights.sum(dim=1), framed_func)
+
+        weights = weights.sum(dim=1)
+        framed_func = torch.where(weights != 0, framed_func / weights, framed_func).nan_to_num(0, 0, 0)
 
         return framed_func
 
@@ -194,8 +199,8 @@ class NonLinearWeightedFrame(WeakStabilizeWeightedFrame):
             f_tx: Tensor = self.unstable_function(
                 torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1)
             ).clone()
-            stable_func = f_x.sign() * torch.sqrt(0.5 * f_x.abs() * (f_x - f_tx).abs().min(dim=-1, keepdim=True)[0])
-            stable_func = stable_func.sum(dim=-3)
+            stable_func = f_x.sign() * torch.sqrt(0.5 * f_x.abs() * (f_x - f_tx).abs().min(dim=-2, keepdim=True)[0])
+            stable_func = stable_func.sum(dim=-2)
         else:
             f_x: Tensor = self.unstable_function(x)
             f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]]).clone()
@@ -275,6 +280,6 @@ if __name__ == '__main__':
 
     X[0, :, 0] = X[0, :, 3]
 
-    SF = NonLinearWeightedFrame(F, d, n, 130, an_invariant=True)
+    SF = LinearWeightedFrame(F, d, n, 130, an_invariant=False,)
 
     print(SF(X))
