@@ -1,10 +1,104 @@
+import argparse
+
 import torch
 from experiments import run_experiments
 
 from experiments_data import generate_datasets
 
+
+def parse_to_generate(parsed_args):
+    generate_datasets(parsed_args.experiment, parsed_args.n_elements, parsed_args.dim,
+                      parsed_args.generate_n_train, parsed_args.generate_n_val, parsed_args.generate_n_test,
+                      parsed_args.generate_lower, parsed_args.generate_upper)
+
+
+def parse_to_experiment(parsed_args):
+    run_experiments.run_experiment(parsed_args.experiment, parsed_args.n_elements, parsed_args.dim,
+                                   parsed_args.ansatz_name,
+                                   parsed_args.embedding_dim, parsed_args.model_name, parsed_args.max_epochs,
+                                   parsed_args.optimizer_kwargs, parsed_args.lr_scheduler_kwargs, parsed_args.loss,
+                                   parsed_args.extra_metrics, parsed_args.early_stopping,
+                                   parsed_args.early_stopping_patience,
+                                   parsed_args.early_stopping_min_delta, parsed_args.batch_size, parsed_args.shuffle,
+                                   parsed_args.n_workers, parsed_args.pin_memory, parsed_args.persistent_workers,
+                                   parsed_args.device,
+                                   torch.float32 if parsed_args.dtype == 'float32' else torch.float64,
+                                   **parsed_args.ansatz_kwargs)
+
+
+def parser_def():
+    parser = argparse.ArgumentParser(prog='experiments',
+                                     description='Run experiments for different ansatzes on various tasks. Make sure to generate data prioraly.',
+                                     formatter_class=argparse.MetavarTypeHelpFormatter)
+    parser.add_argument('--experiment', type=str, required=False, default='determinant',
+                        help='Name of the experiment to run. Must be in EXPERIMENTS ("determinant", "norm_cross_product_discontinuity", "cross_product").')
+    parser.add_argument('--n_elements', type=int, required=False, default=10, help='Number of elements in the input.')
+    parser.add_argument('--dim', type=int, required=False, default=10,
+                        help='Dimensionality of each element in the input.')
+    parser.add_argument('--ansatz_name', type=str, required=False, default='afanet',
+                        help='Name of the ansatz to use. One of ("bl", "on", "afanet", "none").')
+    parser.add_argument('--embedding_dim', type=int, required=False, default=None,
+                        help='Dimensionality of the embedding space.')
+    parser.add_argument('--model_name', type=str, required=False, default='mlp',
+                        help='Name of the model architecture to use. Must be one of ("mlp", "deepsets", "attention").')
+    parser.add_argument('--optimizer_kwargs', type=dict, required=False, default={'optimizer': 'adam', 'lr': 1e-3},
+                        help='Dictionary of optimizer parameters, e.g., {"optimizer": "adam", "lr": 0.001}.')
+    parser.add_argument('--lr_scheduler_kwargs', type=dict, required=False,
+                        default={'lr_scheduler': 'reduce', 'factor': 0.3, 'patience': 0, 'min_lr': 1e-6},
+                        help='Dictionary of learning rate scheduler parameters, e.g., {"lr_scheduler": "reduce", "factor": 0.3, "min_lr": 1e-6}.')
+    parser.add_argument('--loss', type=str, required=False, default='mse', help='Loss function to use (mse, l1, etc.).')
+    parser.add_argument('--extra_metrics', type=list, required=False, default=['mse', 'l1', 'mare'],
+                        help='Additional metrics to compute during training (list of strings).')
+    parser.add_argument('--early_stopping', type=bool, required=False, default=True,
+                        help='Whether to use early stopping based on validation loss.')
+    parser.add_argument('--early_stopping_patience', type=int, required=False, default=15,
+                        help='Number of epochs with no improvement after which training will be stopped.')
+    parser.add_argument('--early_stopping_min_delta', type=float, required=False, default=1e-4,
+                        help='Minimum change in the monitored quantity to qualify as an improvement.')
+    parser.add_argument('--max_epochs', type=int, required=False, default=100,
+                        help='Maximum number of training epochs.')
+    parser.add_argument('--batch_size', type=int, required=False, default=512, help='Batch size for training.')
+    parser.add_argument('--shuffle', type=bool, required=False, default=True, help='Whether to shuffle the data.')
+    parser.add_argument('--n_workers', type=int, required=False, default=16,
+                        help='Number of worker processes for data loading.')
+    parser.add_argument('--pin_memory', type=bool, required=False, default=True,
+                        help='Whether to pin memory during data loading.')
+    parser.add_argument('--persistent_workers', type=bool, required=False, default=True,
+                        help='Whether to use persistent workers for data loading.')
+    parser.add_argument('--device', type=str, required=False, default='cpu',
+                        help='Device to run the experiment on (cuda or cpu).')
+    parser.add_argument('--dtype', type=str, required=False, default='float64',
+                        help='Data type for tensors (float32 or float64).')
+    parser.add_argument('--ansatz_kwargs', type=dict, required=False, default={},
+                        help='Additional keyword arguments to pass to the ansatz constructor.')
+    parser.add_argument('--run_generate_datasets', action='store_true',
+                        help='If set, generate datasets instead of running an experiment.')
+    parser.add_argument('--generate_lower', type=float, required=False, default=-1.0,
+                        help='Lower bound for dataset generation.')
+    parser.add_argument('--generate_upper', type=float, required=False, default=1.0,
+                        help='Upper bound for dataset generation.')
+    parser.add_argument('--generate_n_train', type=int, required=False, default=100_000,
+                        help='Number of training samples to generate.')
+    parser.add_argument('--generate_n_val', type=int, required=False, default=10_000,
+                        help='Number of validation samples to generate.')
+    parser.add_argument('--generate_n_test', type=int, required=False, default=20_000,
+                        help='Number of test samples to generate.')
+    parser.print_help()
+    return parser.parse_args()
+
+
+def main():
+    parsed_args = parser_def()
+    if parsed_args.run_generate_datasets:
+        parse_to_generate(parsed_args)
+
+    else:
+        parse_to_experiment(parsed_args)
+
+
 if __name__ == '__main__':
-    pass
+    main()
+    exit(0)
     # generate_datasets('determinant', 2, 2, 100_000, 10_000, 10_000)
     # generate_datasets('determinant', 10, 10, 100_000, 10_000, 20_000,
     #                   lower=-1.4, upper=1.4)
