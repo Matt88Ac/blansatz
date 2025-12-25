@@ -125,7 +125,7 @@ class WeakStabilizeWeightedFrame(nn.Module):
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
         super(WeakStabilizeWeightedFrame, self).__init__()
         self.weighted_frame = AsWeightedFrame(in_dim, n_frames).to(device=device, dtype=dtype)
-        self.transpositions = all_transpositions(in_channels, device=device)
+        self.transpositions = nn.Parameter(all_transpositions(in_channels, device=device), requires_grad=False)
         self.unstable_function = unstable_function.to(device, dtype)
         self.an_invariant = an_invariant
 
