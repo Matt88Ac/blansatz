@@ -89,7 +89,7 @@ class GeneralTrainer(LightningModule):
     @torch.no_grad()
     def extra_metrics_compute(self, y_hat, y, prefix: str):
         for metric in self.extra_metrics_names:
-            self.log(f'{prefix}_{metric}', self.extra_metrics[metric](y_hat, y))
+            self.log(f'{prefix}_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
 
     def training_step(self, batch, batch_idx):
         X, y = batch
