@@ -51,7 +51,7 @@ class ProjectiveSorting(nn.Module):
         >>> X = torch.randn(b, d, n)
         >>> m = 2 * d * n + 1
         >>> ps = ProjectiveSorting(d, m)
-        >>> projected_x, signs, sorted_x = ps(X)
+        >>> diff_proj_x, sorted_proj_x, sorted_x = ps(X)
     """
 
     def __init__(self, in_dim: int, projection_dim: int):
@@ -68,9 +68,9 @@ class ProjectiveSorting(nn.Module):
             x: a tensor of shape [b, d, n] or [d, n].
 
         Returns: the following three tensors:
-            - sorted projection of x.
-            - the signs of the permutations which the projection of x is sorted according to.
-            - the permuted input x, according to each of the permutations mentioned in the latter.
+            - diff_proj_x: tensor of shape [b, m, n*(n-1)/2] or [m, n*(n-1)/2] containing all differences a*(X_j - X_i): i < j for each projecting vector a.
+            - sorted_proj_x: tensor of shape [b, m, n] or [m, n] of the projections a*X sorted along the last axis.
+            - out_x: tensor of shape [b, m, n] or [m, n] containing the input x permuted according to the sorting of the projections a*X.
         """
         projected_x = nn.functional.linear(x.swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1)
         sorted_proj_x, permutations = torch.sort(projected_x.clone(), stable=True, dim=-1)
