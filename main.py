@@ -61,7 +61,7 @@ def parser_def():
     parser.add_argument('--shuffle', type=bool, required=False, default=True, help='Whether to shuffle the data.')
     parser.add_argument('--n_workers', type=int, required=False, default=16,
                         help='Number of worker processes for data loading.')
-    parser.add_argument('--pin_memory', type=bool, required=False, default=True,
+    parser.add_argument('--pin_memory', type=bool, required=False, default=False,
                         help='Whether to pin memory during data loading.')
     parser.add_argument('--persistent_workers', type=bool, required=False, default=True,
                         help='Whether to use persistent workers for data loading.')
