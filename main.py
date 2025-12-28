@@ -14,6 +14,12 @@ def parse_to_generate(parsed_args):
 
 
 def parse_to_experiment(parsed_args):
+    if parsed_args.device == 'cuda':
+        from multiprocessing import set_start_method
+        try:
+            set_start_method('spawn')
+        except RuntimeError:
+            pass
     run_experiments.run_experiment(parsed_args.experiment, parsed_args.n_elements, parsed_args.dim,
                                    parsed_args.ansatz_name,
                                    parsed_args.embedding_dim, parsed_args.model_name, parsed_args.max_epochs,
