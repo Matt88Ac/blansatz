@@ -71,6 +71,8 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                                    optimizer_kwargs, lr_scheduler_kwargs, loss, extra_metrics,
                                    **ansatz_kwargs).to(device=device, dtype=dtype)
 
+    ansatz.configure_input_array()
+
     data = ExperimentLightningDataModule(experiment, n_elements, dim, batch_size, shuffle,
                                          n_workers, pin_memory, persistent_workers,
                                          device=device, dtype=dtype)
