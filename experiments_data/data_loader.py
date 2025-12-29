@@ -92,7 +92,7 @@ class ExperimentLightningDataModule(LightningDataModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
                           shuffle=self.shuffle, num_workers=self.n_workers,
-                          pin_memory=self.pin_memory, persistent_workers=False)
+                          pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
@@ -102,7 +102,7 @@ class ExperimentLightningDataModule(LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
                           num_workers=self.n_workers,
-                          pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
+                          pin_memory=self.pin_memory, persistent_workers=False)
 
 
 if __name__ == '__main__':
