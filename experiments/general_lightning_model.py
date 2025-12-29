@@ -1,8 +1,9 @@
 from time import time
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Union
 
 import torch
 from pytorch_lightning import LightningModule
+from torch import Tensor
 
 from ansatzes import AfaNetModel, BiLipschitzAntiSymmetricModel, OnVandermondeModel
 from experiments import (get_loss, get_optimizer, get_lr_scheduler)
@@ -69,6 +70,7 @@ class GeneralTrainer(LightningModule):
         self.ansatz_kwargs['out_dim'] = out_dim
         self.ansatz_kwargs['embedding_dim'] = embedding_dim
         self.model = None
+        self.example_input_array_dims = (1, in_dim, in_channels)
 
     def configure_optimizers(self):
         optimizer = self.optim(self.model.parameters())
@@ -76,6 +78,9 @@ class GeneralTrainer(LightningModule):
             return optimizer
 
         return {'optimizer': optimizer, 'lr_scheduler': {"scheduler": self.lr_sched(optimizer), "monitor": 'val_loss'}}
+
+    def configure_input_array(self) -> None:
+        self.example_input_array = torch.rand(*self.example_input_array_dims, dtype=self.dtype, device=self.device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
