@@ -7,6 +7,7 @@ from torch import nn
 from ansatz_utils import vectorized_permutation_sign, AllDifferences
 
 
+@torch.jit.script
 def alternation_separation(sorted_x: Tensor) -> Tensor:
     """
     Args:
@@ -17,17 +18,6 @@ def alternation_separation(sorted_x: Tensor) -> Tensor:
     """
 
     return torch.diff(sorted_x, dim=-1).min(dim=-1, keepdim=True)[0]
-
-
-def weight_by_alternation_separation(x: Tensor) -> Tensor:
-    """
-    Args:
-        x: a tensor of shape [..., n].
-
-    Returns:
-        A tensor of shape [..., n-1] where each element is the minimum difference between consecutive elements in the sorted last axis.
-    """
-    return x * alternation_separation(torch.sort(x, dim=-1, stable=True)[0])
 
 
 class ProjectiveSorting(nn.Module):
@@ -56,40 +46,40 @@ class ProjectiveSorting(nn.Module):
 
     def __init__(self, in_dim: int, projection_dim: int):
         super(ProjectiveSorting, self).__init__()
-        self.spatial_projector = nn.Parameter(torch.empty(projection_dim, in_dim))
-        self.reset_parameters()
+        self.spatial_projector = nn.Linear(in_dim, projection_dim, bias=False)
 
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.spatial_projector, gain=self.spatial_projector.shape[-1])
-
-    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
+    def forward(self, x: Tensor, sorted_not_proj_needed: bool) -> Tuple[Tensor, Tensor]:
         """
         Args:
-            x: a tensor of shape [b, d, n] or [d, n].
+            x (Tensor): a tensor of shape [b, d, n] or [d, n].
+            sorted_not_proj_needed (bool):  If true,
 
         Returns: the following three tensors:
             - diff_proj_x: tensor of shape [b, m, n*(n-1)/2] or [m, n*(n-1)/2] containing all differences a*(X_j - X_i): i < j for each projecting vector a.
             - sorted_proj_x: tensor of shape [b, m, n] or [m, n] of the projections a*X sorted along the last axis.
             - out_x: tensor of shape [b, m, n] or [m, n] containing the input x permuted according to the sorting of the projections a*X.
         """
-        projected_x = nn.functional.linear(x.swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1)
-        sorted_proj_x, permutations = torch.sort(projected_x.clone(), stable=True, dim=-1)
+        projected_x = self.spatial_projector(x.swapaxes(-2, -1)).swapaxes(-2, -1)
         diff_proj_x = AllDifferences.apply(projected_x)
-
-        out_x = torch.take_along_dim(x.clone().unsqueeze(1).requires_grad_(True), permutations.unsqueeze(-2), -1)
-
-        # permutations = vectorized_permutation_sign(permutations)
-
-        """
-        for i in range(len(signs)):
-            for j in range(signs.size(1)):
-                assert signs[i, j] == permutation_sign(permutations[i, j])
-        """
-        return diff_proj_x, sorted_proj_x, out_x
+        if sorted_not_proj_needed:
+            return diff_proj_x, torch.sort(projected_x, stable=True, dim=-1)[0]
+        else:
+            permutations = torch.argsort(projected_x, stable=True, dim=-1)
+            # permutations = vectorized_permutation_sign(permutations)
+            return diff_proj_x, torch.take_along_dim(x.unsqueeze(1), permutations.unsqueeze(-2), -1)
+        # sorted_proj_x, permutations = torch.sort(
+        #     nn.functional.linear(x.swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1),
+        #     stable=True, dim=-1
+        # )
+        # if sorted_not_proj_needed:
+        #     return (sorted_proj_x,
+        #             vectorized_permutation_sign(permutations).unsqueeze(-1) * alternation_separation(sorted_proj_x))
+        # else:
+        #     return alternation_separation(sorted_proj_x), permutations
 
     @property
     def weights(self):
-        return self.spatial_projector
+        return self.spatial_projector.weight
 
 
 class AnInvariantEmbedding(nn.Module):
@@ -131,7 +121,7 @@ class AnInvariantEmbedding(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         # projected_x, signs, sorted_x = self.projection_sorting(x)
-        diff_proj_x, sorted_proj_x, out_x = self.projection_sorting(x)
+        diff_proj_x, sorted_proj_x = self.projection_sorting(x, True)
         out_x = torch.cat([sorted_proj_x,
                            diff_proj_x.sign().prod(dim=-1, keepdim=True) * diff_proj_x.abs().min(dim=-1, keepdim=True)[
                                0]], dim=-1)
