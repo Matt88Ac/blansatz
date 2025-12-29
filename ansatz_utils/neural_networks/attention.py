@@ -64,7 +64,10 @@ class SnEquivariantAttentionBlock(nn.Module):
 
         if self.num_heads > 1:
             *size, n, m = q.shape
-            q, k, v = map(lambda t: t.view(*size, n, m // self.num_heads, self.num_heads).transpose(-2, -3), (q, k, v))
+            q, k, v = map(lambda t: t.contiguous().view(*size,
+                                                        n,
+                                                        m // self.num_heads,
+                                                        self.num_heads).transpose(-2, -3), (q, k, v))
 
         out = scaled_dot_product_attention(q, k, v)
 
