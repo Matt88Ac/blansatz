@@ -7,7 +7,7 @@ from torch import Tensor
 from torch import nn
 
 from ansatz_utils import all_transpositions, ProjectiveSorting, alternation_separation, linear_wsop_sub_weights, \
-    random_negative_permutation
+    random_negative_permutation, vectorized_permutation_sign
 
 
 class AsWeightedFrame(nn.Module):
@@ -48,12 +48,15 @@ class AsWeightedFrame(nn.Module):
             Tensor: The weighted frame averaged output.
         """
 
-        diff_proj_x, sorted_proj_x, out_x = self.projection_sorting(x)
-        del sorted_proj_x
-        signs = diff_proj_x.sign().prod(dim=-1, keepdim=True).clone()
+        diff_proj_x, out_x = self.projection_sorting(x, False)
+        signs = diff_proj_x.sign().prod(dim=-1, keepdim=True)
         weights = diff_proj_x.abs().min(dim=-1, keepdim=True)[0]
+
+        # weights, permutations = self.projection_sorting(x, False)
+        # signs = vectorized_permutation_sign(permutations).unsqueeze(-1)
+        # out_x = torch.take_along_dim(x.unsqueeze(1), permutations.unsqueeze(-2), -1)
+
         if not an_invariant:
-            ws = ws_function(out_x)
             framed_func = ((weights * signs) * ws_function(out_x)).sum(dim=1)
         else:
             neg_pem = random_negative_permutation(x.shape[-1], x.device)
@@ -152,7 +155,7 @@ class WeakStabilizeWeightedFrame(nn.Module):
         """
         return self.weighted_frame(
             self.stable_forward,
-            x.to(device=self.weighted_frame.get_device, dtype=self.weighted_frame.get_dtype),
+            x,
             self.an_invariant
         )
 
@@ -198,12 +201,12 @@ class NonLinearWeightedFrame(WeakStabilizeWeightedFrame):
             f_x: Tensor = self.unstable_function(sorted_x)
             f_tx: Tensor = self.unstable_function(
                 torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1)
-            ).clone()
+            )
             stable_func = f_x.sign() * torch.sqrt(0.5 * f_x.abs() * (f_x - f_tx).abs().min(dim=-2, keepdim=True)[0])
             stable_func = stable_func.sum(dim=-2)
         else:
             f_x: Tensor = self.unstable_function(x)
-            f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]]).clone()
+            f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]])
             stable_func = f_x.sign() * torch.sqrt(0.5 * f_x.abs() * (f_x - f_tx).abs())
             stable_func = stable_func.unsqueeze(1)
         return stable_func
