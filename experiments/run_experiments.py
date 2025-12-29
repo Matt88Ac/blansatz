@@ -79,7 +79,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
 
     PATH = os.path.dirname(__file__) + os.sep + f'{experiment}_logs' + os.sep + f'{ansatz.model_name}_{data.batch_size}'
 
-    tb_logger = TensorBoardLogger(PATH + os.sep + "tb_logs", log_graph=True)
+    tb_logger = TensorBoardLogger(PATH + os.sep + "tb_logs",)# log_graph=True)
     csv_logger = CSVLogger(PATH + os.sep + "csv_logs")
     checkpoint = callbacks.ModelCheckpoint(
         filename="best",
