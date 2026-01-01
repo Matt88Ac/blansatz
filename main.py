@@ -20,6 +20,7 @@ def parse_to_experiment(parsed_args):
             set_start_method('spawn')
         except RuntimeError:
             pass
+        torch.cuda.empty_cache()
         torch.backends.cudnn.benchmark = True
     run_experiments.run_experiment(parsed_args.experiment, parsed_args.n_elements, parsed_args.dim,
                                    parsed_args.ansatz_name,
