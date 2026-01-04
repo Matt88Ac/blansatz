@@ -2,7 +2,7 @@ from typing import Optional, Union, Iterable
 
 import torch
 from torch import nn
-from .activations import get_activation
+from activations import get_activation
 
 
 class MLP(nn.Module):
@@ -25,6 +25,10 @@ class MLP(nn.Module):
         activation_constant: (float, Optional):
             A tunable hyperparameter that some of the mentioned activation functions use. Neglected when irrelevant.
             Default: 0.01.
+        layer_norm (bool, Iterable[bool], str, Optional):
+            When set to True, layer normalization is applied after each linear layer. Another option is to specify for
+            each hidden layer, by setting a boolean iterable. Default: False. If set to 'all_but_last', layer normalization is applied
+            to all layers except the last one.
         device (str, torch.device, Optional): The device. Default: 'cpu'.
         dtype (str, torch.dtype, Optional): The dtype. Default: torch.float64.
         kwargs: Additional arguments (not used).
@@ -56,6 +60,7 @@ class MLP(nn.Module):
     def __init__(self, in_dim: int, out_dim: int, hidden_layers: Optional[list[int]] = None,
                  biases: Optional[Union[bool, Iterable[bool], str]] = True,
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
+                 layer_norm: Optional[Union[bool, Iterable[bool], str]] = False,
                  device=torch.device('cpu'), dtype=torch.float64, **kwargs):
         super(MLP, self).__init__()
         if hidden_layers is None:
@@ -74,11 +79,24 @@ class MLP(nn.Module):
             biases = list(biases)
             assert len(biases) == len(self.layer_dims) - 1
 
+        if isinstance(layer_norm, bool):
+            layer_norm = [layer_norm] * (len(self.layer_dims) - 1)
+        elif layer_norm == 'all_but_last':
+            layer_norm = [True] * (len(self.layer_dims) - 1)
+            layer_norm[-1] = False
+        else:
+            layer_norm = list(layer_norm)
+            assert len(layer_norm) == len(self.layer_dims) - 1
+
         layers = [nn.Linear(self.layer_dims[0], self.layer_dims[1], bias=biases[0])]
+        if layer_norm[0]:
+            layers.append(nn.LayerNorm(self.layer_dims[1], bias=biases[0]))
 
         for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[1:-1], self.layer_dims[2:])):
             layers.append(get_activation(activation, activation_constant))
             layers.append(nn.Linear(in_dim, out_dim, bias=biases[i + 1]))
+            if layer_norm[i+1]:
+                layers.append(nn.LayerNorm(out_dim, bias=biases[i+1]))
 
         self.layers = nn.Sequential(*layers).to(device=device, dtype=dtype)
 
@@ -89,5 +107,7 @@ class MLP(nn.Module):
 if __name__ == '__main__':
     pass
 
-    # mlp = MLP(5, 7, [3, 10, 2], True)
-    # print(mlp)
+    mlp = MLP(5, 7, [3, 10, 2], True, layer_norm=True)
+    X = torch.rand(10, 3, 2, 5, dtype=torch.float64)
+
+    print(mlp(X).shape)
