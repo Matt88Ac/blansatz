@@ -29,6 +29,8 @@ class MLP(nn.Module):
             When set to True, layer normalization is applied after each linear layer. Another option is to specify for
             each hidden layer, by setting a boolean iterable. Default: False. If set to 'all_but_last', layer normalization is applied
             to all layers except the last one.
+        elementwise_affine (bool, Optional):
+            Whether the layer normalization includes learnable affine parameters. Default: True.
         device (str, torch.device, Optional): The device. Default: 'cpu'.
         dtype (str, torch.dtype, Optional): The dtype. Default: torch.float64.
         kwargs: Additional arguments (not used).
@@ -61,6 +63,7 @@ class MLP(nn.Module):
                  biases: Optional[Union[bool, Iterable[bool], str]] = True,
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
                  layer_norm: Optional[Union[bool, Iterable[bool], str]] = False,
+                 elementwise_affine: Optional[bool] = True,
                  device=torch.device('cpu'), dtype=torch.float64, **kwargs):
         super(MLP, self).__init__()
         if hidden_layers is None:
@@ -90,13 +93,13 @@ class MLP(nn.Module):
 
         layers = [nn.Linear(self.layer_dims[0], self.layer_dims[1], bias=biases[0])]
         if layer_norm[0]:
-            layers.append(nn.LayerNorm(self.layer_dims[1], bias=biases[0]))
+            layers.append(nn.LayerNorm(self.layer_dims[1], bias=biases[0], elementwise_affine=elementwise_affine))
 
         for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[1:-1], self.layer_dims[2:])):
             layers.append(get_activation(activation, activation_constant))
             layers.append(nn.Linear(in_dim, out_dim, bias=biases[i + 1]))
             if layer_norm[i+1]:
-                layers.append(nn.LayerNorm(out_dim, bias=biases[i+1]))
+                layers.append(nn.LayerNorm(out_dim, bias=biases[i+1], elementwise_affine=elementwise_affine))
 
         self.layers = nn.Sequential(*layers).to(device=device, dtype=dtype)
 
