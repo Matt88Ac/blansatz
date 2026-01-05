@@ -30,6 +30,7 @@ def parse_to_experiment(parsed_args):
                                    parsed_args.early_stopping_patience,
                                    parsed_args.early_stopping_min_delta, parsed_args.gradient_clip,
                                    parsed_args.gradient_clip_val, parsed_args.gradient_clip_algorithm,
+                                   parsed_args.accumulate_grad,
                                    parsed_args.batch_size, parsed_args.shuffle,
                                    parsed_args.n_workers, parsed_args.pin_memory, parsed_args.persistent_workers,
                                    parsed_args.device,
@@ -80,7 +81,10 @@ def parser_def():
                         help='Maximum norm for gradient clipping.')
     parser.add_argument('--gradient_clip_algorithm', type=str, required=False, default='norm',
                         help='Algorithm for gradient clipping ("norm" or "value").')
-    
+
+    parser.add_argument('--accumulate_grad', type=int, required=False, default=1,
+                        help='Number of batches to accumulate gradients over.')
+
     parser.add_argument('--max_epochs', type=int, required=False, default=100,
                         help='Maximum number of training epochs.')
     parser.add_argument('--batch_size', type=int, required=False, default=512, help='Batch size for training.')

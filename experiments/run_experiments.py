@@ -28,6 +28,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                    gradient_clip: Optional[bool] = False,
                    gradient_clip_val: Optional[float] = 1.0,
                    gradient_clip_algorithm: Optional[str] = 'norm',
+                   accumulate_grad_batches: Optional[int] = 1,
                    batch_size: Optional[int] = 64, shuffle: Optional[bool] = True,
                    n_workers: int = 0, pin_memory: bool = False,
                    persistent_workers: bool = False,
@@ -54,6 +55,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         gradient_clip (bool, optional): Whether to apply gradient clipping. Default is False.
         gradient_clip_val (float, optional): Maximum norm for gradient clipping. Default is 1.0.
         gradient_clip_algorithm (str, optional): Algorithm for gradient clipping ('norm' or 'value'). Default is 'norm'.
+        accumulate_grad_batches (int, optional): Number of batches to accumulate gradients over. Default is 1.
         batch_size (int, optional): Batch size for training. Default is 64.
         shuffle (bool, optional): Whether to shuffle the data. Default is True.
         n_workers (int): Number of worker processes for data loading. Default is 0.
@@ -109,7 +111,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
             max_epochs=max_epochs,
             callbacks=call_backs,
             enable_checkpointing=True,
-            log_every_n_steps=1,
+            log_every_n_steps=1, accumulate_grad_batches=accumulate_grad_batches
         )
     else:
         trainer = Trainer(
@@ -120,7 +122,8 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
             enable_checkpointing=True,
             log_every_n_steps=1,
             gradient_clip_val=gradient_clip_val,
-            gradient_clip_algorithm=gradient_clip_algorithm
+            gradient_clip_algorithm=gradient_clip_algorithm, 
+            accumulate_grad_batches=accumulate_grad_batches
         )
     trainer.fit(ansatz, data)
     trainer.test(ansatz, data, 'best')
