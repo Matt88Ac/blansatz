@@ -28,7 +28,9 @@ def parse_to_experiment(parsed_args):
                                    parsed_args.optimizer_kwargs, parsed_args.lr_scheduler_kwargs, parsed_args.loss,
                                    parsed_args.extra_metrics, parsed_args.early_stopping,
                                    parsed_args.early_stopping_patience,
-                                   parsed_args.early_stopping_min_delta, parsed_args.batch_size, parsed_args.shuffle,
+                                   parsed_args.early_stopping_min_delta, parsed_args.gradient_clip,
+                                   parsed_args.gradient_clip_val, parsed_args.gradient_clip_algorithm,
+                                   parsed_args.batch_size, parsed_args.shuffle,
                                    parsed_args.n_workers, parsed_args.pin_memory, parsed_args.persistent_workers,
                                    parsed_args.device,
                                    torch.float32 if parsed_args.dtype == 'float32' else torch.float64,
@@ -64,22 +66,33 @@ def parser_def():
     parser.add_argument('--loss', type=str, required=False, default='mse', help='Loss function to use (mse, l1, etc.).')
     parser.add_argument('--extra_metrics', type=list, required=False, default=['mse', 'l1', 'mare'],
                         help='Additional metrics to compute during training (list of strings).')
+    
     parser.add_argument('--early_stopping', type=bool, required=False, default=True,
                         help='Whether to use early stopping based on validation loss.')
     parser.add_argument('--early_stopping_patience', type=int, required=False, default=15,
                         help='Number of epochs with no improvement after which training will be stopped.')
     parser.add_argument('--early_stopping_min_delta', type=float, required=False, default=1e-4,
                         help='Minimum change in the monitored quantity to qualify as an improvement.')
+    
+    parser.add_argument('--gradient_clip', type=bool, required=False, default=False,
+                        help='Whether to apply gradient clipping.')
+    parser.add_argument('--gradient_clip_val', type=float, required=False, default=1.0,
+                        help='Maximum norm for gradient clipping.')
+    parser.add_argument('--gradient_clip_algorithm', type=str, required=False, default='norm',
+                        help='Algorithm for gradient clipping ("norm" or "value").')
+    
     parser.add_argument('--max_epochs', type=int, required=False, default=100,
                         help='Maximum number of training epochs.')
     parser.add_argument('--batch_size', type=int, required=False, default=512, help='Batch size for training.')
     parser.add_argument('--shuffle', type=bool, required=False, default=True, help='Whether to shuffle the data.')
+    
     parser.add_argument('--n_workers', type=int, required=False, default=16,
                         help='Number of worker processes for data loading.')
     parser.add_argument('--pin_memory', type=bool, required=False, default=False,
                         help='Whether to pin memory during data loading.')
     parser.add_argument('--persistent_workers', type=bool, required=False, default=True,
                         help='Whether to use persistent workers for data loading.')
+    
     parser.add_argument('--device', type=str, required=False, default='cpu',
                         help='Device to run the experiment on (cuda or cpu).')
     parser.add_argument('--dtype', type=str, required=False, default='float64',

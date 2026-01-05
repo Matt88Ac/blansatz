@@ -25,6 +25,9 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                    early_stopping: Optional[bool] = True,
                    early_stopping_patience: Optional[int] = 3,
                    early_stopping_min_delta: Optional[float] = 1e-4,
+                   gradient_clip: Optional[bool] = False,
+                   gradient_clip_val: Optional[float] = 1.0,
+                   gradient_clip_algorithm: Optional[str] = 'norm',
                    batch_size: Optional[int] = 64, shuffle: Optional[bool] = True,
                    n_workers: int = 0, pin_memory: bool = False,
                    persistent_workers: bool = False,
@@ -48,6 +51,9 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         early_stopping (bool, optional): Whether to use early stopping, based on validation loss. Default is True.
         early_stopping_patience (int, optional): Number of epochs with no improvement after which training will be stopped. Default is 3.
         early_stopping_min_delta (float, optional): Minimum change in the monitored quantity to qualify as an improvement. Default is 1e-4.
+        gradient_clip (bool, optional): Whether to apply gradient clipping. Default is False.
+        gradient_clip_val (float, optional): Maximum norm for gradient clipping. Default is 1.0.
+        gradient_clip_algorithm (str, optional): Algorithm for gradient clipping ('norm' or 'value'). Default is 'norm'.
         batch_size (int, optional): Batch size for training. Default is 64.
         shuffle (bool, optional): Whether to shuffle the data. Default is True.
         n_workers (int): Number of worker processes for data loading. Default is 0.
@@ -96,14 +102,25 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                                     stopping_threshold=0)
         )
 
-    trainer = Trainer(
-        logger=[csv_logger, tb_logger],
-        accelerator="gpu" if device == 'cuda' else "cpu",
-        max_epochs=max_epochs,
-        callbacks=call_backs,
-        enable_checkpointing=True,
-        log_every_n_steps=1,
-        # gradient_clip_val=1.0, gradient_clip_algorithm='norm'
-    )
+    if not gradient_clip:
+        trainer = Trainer(
+            logger=[csv_logger, tb_logger],
+            accelerator="gpu" if device == 'cuda' else "cpu",
+            max_epochs=max_epochs,
+            callbacks=call_backs,
+            enable_checkpointing=True,
+            log_every_n_steps=1,
+        )
+    else:
+        trainer = Trainer(
+            logger=[csv_logger, tb_logger],
+            accelerator="gpu" if device == 'cuda' else "cpu",
+            max_epochs=max_epochs,
+            callbacks=call_backs,
+            enable_checkpointing=True,
+            log_every_n_steps=1,
+            gradient_clip_val=gradient_clip_val,
+            gradient_clip_algorithm=gradient_clip_algorithm
+        )
     trainer.fit(ansatz, data)
     trainer.test(ansatz, data, 'best')
