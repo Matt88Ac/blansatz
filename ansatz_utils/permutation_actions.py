@@ -54,8 +54,11 @@ def random_negative_permutation(dim: int, device: Optional[Union[str, torch.devi
         Random negative-signed permutation element.
     """
     permutation = torch.randperm(dim, device=device)
-    while permutation_sign(permutation) == 1:
+    sign = permutation_sign(permutation)
+    pos = torch.ones_like(sign)
+    while torch.allclose(sign, pos):
         permutation = torch.randperm(dim, device=device)
+        sign = permutation_sign(permutation)
     return permutation
 
 
@@ -69,8 +72,11 @@ def random_positive_permutation(dim: int, device: Optional[Union[str, torch.devi
         Random negative-signed permutation element.
     """
     permutation = torch.randperm(dim, device=device)
-    while permutation_sign(permutation) == -1:
+    sign = permutation_sign(permutation)
+    neg = -torch.ones_like(sign)
+    while torch.allclose(sign, neg):
         permutation = torch.randperm(dim, device=device)
+        sign = permutation_sign(permutation)
     return permutation
 
 
@@ -84,9 +90,8 @@ def random_transposition(dim: int, device: Optional[Union[str, torch.device]] = 
     Returns:
         Random transposition element.
     """
-    indices = range(dim)
-    x1, x2 = sample(indices, 2)
-    transposition = torch.tensor(list(indices), device=device, requires_grad=False)
+    transposition = torch.arange(0, dim, requires_grad=False, device=device).long()
+    x1, x2 = (0, 1)
     transposition[[x1, x2]] = transposition[[x2, x1]]
     return transposition
 
@@ -130,4 +135,3 @@ if __name__ == '__main__':
         s2 = S[j]
         # print(s1, s2)
         assert s1 == s2
-
