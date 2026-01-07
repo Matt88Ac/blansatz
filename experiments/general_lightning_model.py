@@ -43,7 +43,9 @@ class GeneralTrainer(LightningModule):
                  extra_metrics: Optional[Iterable[str]] = None,
                  **ansatz_kwargs):
         super(GeneralTrainer, self).__init__()
+
         self.save_hyperparameters()
+
         if extra_metrics is None:
             extra_metrics = []
 
@@ -99,30 +101,40 @@ class GeneralTrainer(LightningModule):
 
     def training_step(self, batch, batch_idx):
         X, y = batch
-        _t = time()
+        # _t = time()
         y_hat = self.forward(X)
         loss = self.loss(y_hat, y)
         self.log('train_loss', loss, prog_bar=True)
         self.log('train_pred_std', y_hat.std(), prog_bar=True)
-        self.log('train_time', time() - _t)
-        self.extra_metrics_compute(y_hat, y, 'train')
+        # self.log('train_time', time() - _t)
+        with torch.no_grad():
+            for metric in self.extra_metrics_names:
+                self.log(f'train_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        self._shared_eval(batch, batch_idx, 'val')
-
-    def test_step(self, batch, batch_idx):
-        self._shared_eval(batch, batch_idx, 'test')
-
-    def _shared_eval(self, batch, batch_idx, prefix):
         X, y = batch
-        _t = time()
+        # _t = time()
         y_hat = self.forward(X)
         loss = self.loss(y_hat, y)
-        self.log(f'{prefix}_loss', loss)
-        self.log(f'{prefix}_time', time() - _t)
-        self.log(f'{prefix}_pred_std', y_hat.std())
-        self.extra_metrics_compute(y_hat, y, prefix)
+        self.log(f'val_loss', loss)
+        # self.log('val_time', time() - _t)
+        self.log(f'val_pred_std', y_hat.std())
+        with torch.no_grad():
+            for metric in self.extra_metrics_names:
+                self.log(f'val_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
+
+    def test_step(self, batch, batch_idx):
+        X, y = batch
+        # _t = time()
+        y_hat = self.forward(X)
+        loss = self.loss(y_hat, y)
+        self.log(f'test_loss', loss)
+        # self.log('test_time', time() - _t)
+        self.log(f'test_pred_std', y_hat.std())
+        with torch.no_grad():
+            for metric in self.extra_metrics_names:
+                self.log(f'test_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
         return loss
 
 
