@@ -7,7 +7,7 @@ from torch import nn
 from ansatz_utils import vectorized_permutation_sign, AllDifferences
 
 
-@torch.jit.script
+# @torch.jit.script
 def alternation_separation(sorted_x: Tensor) -> Tensor:
     """
     Args:
