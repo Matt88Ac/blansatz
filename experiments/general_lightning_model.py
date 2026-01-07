@@ -1,13 +1,12 @@
 from time import time
-from typing import Optional, Iterable, Union
+from typing import Optional, Iterable
 
 import torch
 from pytorch_lightning import LightningModule
-from torch import Tensor
 
+from ansatz_utils import get_model
 from ansatzes import AfaNetModel, BiLipschitzAntiSymmetricModel, OnVandermondeModel
 from experiments import (get_loss, get_optimizer, get_lr_scheduler)
-from ansatz_utils import get_model
 
 
 class GeneralTrainer(LightningModule):
