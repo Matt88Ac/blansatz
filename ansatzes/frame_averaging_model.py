@@ -3,8 +3,8 @@ from typing import Optional
 import torch
 from torch import nn
 
-from ansatzes import BiLipschitzAntiSymmetricModel
 from ansatz_utils import get_model, LinearWeightedFrame, NonLinearWeightedFrame
+from ansatzes import BiLipschitzAntiSymmetricModel
 
 
 class AfaNetModel(nn.Module):
