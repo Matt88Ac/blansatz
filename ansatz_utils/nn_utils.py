@@ -71,21 +71,9 @@ def uniform_sphere_sampling(n_samples: int, dim: int) -> torch.Tensor:
     return samples / torch.norm(samples, dim=-1, keepdim=True)
 
 
-@torch.jit.script
-def prod_all_but_one(X: torch.Tensor) -> torch.Tensor:
-    """
-        Args:
-            X (torch.Tensor):
-                A real tensor X of shape [b, d_1, ..., d_k, n]
-
-        Returns (torch.Tensor):
-            A real tensor of shape [b, d_1, ..., d_k, n*(n-1)/2],
-            where on the last axis, at each element i, we have prod(X_j, for 1<=j!=i<=n).
-        """
-    return torch.cat([X[..., :i].prod(-1, True) * X[..., i + 1:].prod(-1, True) for i in range(X.size(-1))], -1)
-
-
-def linear_wsop_sub_weights(X: torch.Tensor, offset=1, scale=0.5) -> torch.Tensor:
+# @torch.jit.script
+# @torch.compile(fullgraph=True, dynamic=True)
+def linear_wsop_sub_weights(X: torch.Tensor) -> torch.Tensor:
     """
         Args:
             X (torch.Tensor):
@@ -96,12 +84,27 @@ def linear_wsop_sub_weights(X: torch.Tensor, offset=1, scale=0.5) -> torch.Tenso
                 A real number that scales the sub-weights
         Returns (torch.Tensor):
                 A real tensor of shape [b, d_1, ..., d_k, n],
-                where on the last axis, at each element i, scale * x_i / (offset + sum(x_j, 1 <= j <= n))
+                where on the last axis, at each element i, scale * (1/x_i) / (offset + sum(1/x_j, 1 <= j <= n))
             """
-    pabo = prod_all_but_one(X)
-    scales = torch.full_like(X, scale, requires_grad=True, device=X.device, dtype=X.dtype,
-                             pin_memory=X.is_pinned(X.device), layout=X.layout)
-    out = scales * pabo / (offset * X.prod(-1, True) + pabo.clone().sum(-1, True))
+
+    is_zero = torch.isclose(X, torch.zeros_like(X))
+
+    zero_count = is_zero.sum(dim=-1, keepdim=True)
+    zero_count = torch.where(zero_count > 0, 1 / zero_count, zero_count) + torch.zeros_like(X)
+    # zero_count = is_zero * zero_count
+
+    out = torch.where(
+        torch.logical_and(zero_count > 0, is_zero > 0),
+        zero_count,
+        torch.zeros_like(X)
+    )
+
+    out = torch.where(
+        zero_count == 0,
+        (1 / X) / (1 + torch.sum(1 / X, dim=-1, keepdim=True)),
+        out
+    ).nan_to_num(0.0, 0.0, 0.0) / 2
+
     return out
 
 
@@ -121,7 +124,7 @@ if __name__ == '__main__':
         return shaped_input, trans_input
 
 
-    x = torch.rand(1, 5, 30)
+    x = torch.rand(1, 5, 30, device='cuda')
     x[:, :, 3] = x[:, :, 2]
 
     xs, xt = make_transpositions(x.transpose(-2, -1))
