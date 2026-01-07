@@ -6,8 +6,8 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from ansatz_utils import all_transpositions, ProjectiveSorting, alternation_separation, linear_wsop_sub_weights, \
-    random_negative_permutation, vectorized_permutation_sign
+from ansatz_utils import all_transpositions, ProjectiveSorting, linear_wsop_sub_weights, \
+    random_transposition
 
 
 class AsWeightedFrame(nn.Module):
@@ -17,6 +17,8 @@ class AsWeightedFrame(nn.Module):
     Args:
         in_dim (int):
             The input dimension of the function to be framed.
+        in_channels (int):
+             The number of input channels.
         n_frames (int):
             The number of frames to use.
 
@@ -24,11 +26,12 @@ class AsWeightedFrame(nn.Module):
         projection_sorting (ProjectiveSorting): 
             An instance of the ProjectiveSorting class to compute weights and signs for the frames.
     """
-    def __init__(self, in_dim: int, n_frames: int):
+    def __init__(self, in_dim: int, in_channels: int, n_frames: int):
         """
         
         """
         super(AsWeightedFrame, self).__init__()
+        self.in_channels = in_channels
         self.projection_sorting = ProjectiveSorting(in_dim, n_frames)
 
     def forward(self,
@@ -59,16 +62,20 @@ class AsWeightedFrame(nn.Module):
         if not an_invariant:
             framed_func = ((weights * signs) * ws_function(out_x)).sum(dim=1)
         else:
-            neg_pem = random_negative_permutation(x.shape[-1], x.device)
+            neg_perm = random_transposition(self.in_channels, device=self.weights.device)
             framed_func = torch.where(signs == 1,
                                       weights * ws_function(out_x, x),
                                       0) - torch.where(signs == -1,
-                                                       weights * ws_function(out_x, x[..., neg_pem]),
+                                                       weights * ws_function(out_x, x[..., neg_perm]),
                                                        0)
             framed_func = framed_func.sum(dim=1)
 
         weights = weights.sum(dim=1)
-        framed_func = torch.where(weights != 0, framed_func / weights, framed_func).nan_to_num(0, 0, 0)
+        framed_func = torch.where(
+            torch.isclose(weights, torch.zeros_like(weights, requires_grad=False)),
+            framed_func,
+            framed_func / weights,
+        ).nan_to_num(0, 0, 0)
 
         return framed_func
 
@@ -127,7 +134,7 @@ class WeakStabilizeWeightedFrame(nn.Module):
                  an_invariant: bool = False,
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
         super(WeakStabilizeWeightedFrame, self).__init__()
-        self.weighted_frame = AsWeightedFrame(in_dim, n_frames).to(device=device, dtype=dtype)
+        self.weighted_frame = AsWeightedFrame(in_dim, in_channels, n_frames).to(device=device, dtype=dtype)
         self.transpositions = nn.Parameter(all_transpositions(in_channels, device=device), requires_grad=False)
         self.unstable_function = unstable_function.to(device, dtype)
         self.an_invariant = an_invariant
@@ -235,11 +242,10 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
     """
     def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
                  an_invariant: bool = False,
-                 p_norm: Union[str, int] = 'fro',
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
         super(LinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
                                                   device, dtype)
-        self.p_norm = p_norm
+        self.p_norm = 'fro'
 
     def stable_forward(self, sorted_x: Tensor, x: Tensor = None) -> Tensor:
         """
@@ -269,7 +275,7 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
         else:
             f_x: Tensor = self.unstable_function(x).unsqueeze(1)
             f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]]).clone().unsqueeze(1)
-            stable_func = f_x - (weight_hat * (f_x + f_tx)).sum(dim=-1, keepdim=True)
+            stable_func = f_x - (weight_hat.sum(dim=-1, keepdim=True) * (f_x + f_tx))
 
         return stable_func
 
