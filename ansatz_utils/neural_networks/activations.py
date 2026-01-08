@@ -36,6 +36,8 @@ def get_activation(activation: str, constant: Optional[float] = 0.01) -> nn.Modu
         return nn.Mish()
     elif activation.lower() == 'tanh':
         return nn.Tanh()
+    elif activation.lower() == 'selu':
+        return nn.SELU()
 
     raise NotImplementedError("Select one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', "
-                              "'identity' or 'tanh'")
+                              "'identity', 'selu' or 'tanh'")
