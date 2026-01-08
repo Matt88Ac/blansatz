@@ -1,5 +1,5 @@
 from typing import Optional, Union, Iterable
-
+from math import sqrt
 import torch
 from torch import nn
 from .activations import get_activation
@@ -92,12 +92,19 @@ class MLP(nn.Module):
             assert len(layer_norm) == len(self.layer_dims) - 1
 
         layers = [nn.Linear(self.layer_dims[0], self.layer_dims[1], bias=biases[0])]
+        with torch.no_grad():
+            nn.init.xavier_uniform_(layers[-1].weight, gain=sqrt(in_dim)*nn.init.calculate_gain('relu'))
+
         if layer_norm[0]:
             layers.append(nn.LayerNorm(self.layer_dims[1], bias=biases[0], elementwise_affine=elementwise_affine))
 
         for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[1:-1], self.layer_dims[2:])):
             layers.append(get_activation(activation, activation_constant))
+
             layers.append(nn.Linear(in_dim, out_dim, bias=biases[i + 1]))
+            with torch.no_grad():
+                nn.init.xavier_uniform_(layers[-1].weight, gain=sqrt(in_dim)*nn.init.calculate_gain('relu'))
+
             if layer_norm[i+1]:
                 layers.append(nn.LayerNorm(out_dim, bias=biases[i+1], elementwise_affine=elementwise_affine))
 
