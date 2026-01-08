@@ -6,7 +6,7 @@ from pytorch_lightning import callbacks, Trainer
 from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 
 from experiments import (LightningOnVandermondeModel, LightningBiLipschitzAntiSymmetricModel,
-                         LightningAfaNetModel, LightningNoneAsModel)
+                         LightningAfaNetModel, LightningNoneAsModel, GeneralTrainer)
 from experiments_data import ExperimentLightningDataModule, EXPERIMENTS
 
 ANSATZES = {'bl': LightningBiLipschitzAntiSymmetricModel,
@@ -75,11 +75,27 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
     assert experiment in EXPERIMENTS
     out_dim = 1 if experiment in ['determinant', 'norm_cross_product_discontinuity'] else 3
 
-    ansatz = ANSATZES[ansatz_name](dim, n_elements, out_dim, embedding_dim, model_name,
-                                   optimizer_kwargs, lr_scheduler_kwargs, loss, extra_metrics,
-                                   **ansatz_kwargs).to(device=device, dtype=dtype)
+    # print(torch._inductor.list_options())
+
+    ansatz: GeneralTrainer = ANSATZES[ansatz_name](dim, n_elements, out_dim, embedding_dim, model_name,
+                                                   optimizer_kwargs, lr_scheduler_kwargs, loss, extra_metrics,
+                                                   **ansatz_kwargs).to(device=device, dtype=dtype)
 
     ansatz.configure_input_array()
+    if device == 'cuda':
+        ansatz.compile(fullgraph=True, dynamic=True,
+                       options={"triton.cudagraphs": True,
+                                "cuda.use_fast_math": True,
+                                "triton.autotune_at_compile_time": True,
+                                "enable_auto_functionalized_v2": True,
+                                "memory_planning": True,
+                                "pattern_matcher": True
+                                # "epilogue_fusion": True,
+                                # "max_autotune": True
+                                }
+                       )
+    else:
+        ansatz.compile(fullgraph=True, dynamic=True)
 
     data = ExperimentLightningDataModule(experiment, n_elements, dim, batch_size, shuffle,
                                          n_workers, pin_memory, persistent_workers,
@@ -87,7 +103,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
 
     PATH = os.path.dirname(__file__) + os.sep + f'{experiment}_logs' + os.sep + f'{ansatz.model_name}_{data.batch_size}'
 
-    tb_logger = TensorBoardLogger(PATH + os.sep + "tb_logs",)# log_graph=True)
+    tb_logger = TensorBoardLogger(PATH + os.sep + "tb_logs", default_hp_metric=False, )  # log_graph=True)
     csv_logger = CSVLogger(PATH + os.sep + "csv_logs")
     checkpoint = callbacks.ModelCheckpoint(
         filename="best",
@@ -122,7 +138,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
             enable_checkpointing=True,
             log_every_n_steps=1,
             gradient_clip_val=gradient_clip_val,
-            gradient_clip_algorithm=gradient_clip_algorithm, 
+            gradient_clip_algorithm=gradient_clip_algorithm,
             accumulate_grad_batches=accumulate_grad_batches
         )
     trainer.fit(ansatz, data)
