@@ -66,7 +66,7 @@ def parser_def():
                         help='Dictionary of learning rate scheduler parameters, e.g., {"lr_scheduler": "reduce", "factor": 0.3, "min_lr": 1e-6}.')
 
     parser.add_argument('--loss', type=str, required=False, default='mse', help='Loss function to use (mse, l1, etc.).')
-    parser.add_argument('--extra_metrics', type=list, required=False, default=['mse', 'l1', 'mare'],
+    parser.add_argument('--extra_metrics', nargs='+', type=str, required=False, default=['mse', 'l1', 'mare'],
                         help='Additional metrics to compute during training (list of strings).')
     
     parser.add_argument('--early_stopping', type=bool, required=False, default=True,
