@@ -30,6 +30,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                    gradient_clip_algorithm: Optional[str] = 'norm',
                    accumulate_grad_batches: Optional[int] = 1,
                    batch_size: Optional[int] = 64, shuffle: Optional[bool] = True,
+                   augment: Optional[int] = 0,
                    n_workers: int = 0, pin_memory: bool = False,
                    persistent_workers: bool = False,
                    device: str = 'cuda', dtype=torch.float64,
@@ -58,6 +59,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         accumulate_grad_batches (int, optional): Number of batches to accumulate gradients over. Default is 1.
         batch_size (int, optional): Batch size for training. Default is 64.
         shuffle (bool, optional): Whether to shuffle the data. Default is True.
+        augment (int, optional): Number of augmentations to apply to the input data. Default is 0.
         n_workers (int): Number of worker processes for data loading. Default is 0.
         pin_memory (bool): Whether to pin memory during data loading. Default is False.
         persistent_workers (bool): Whether to use persistent workers for data loading. Default is False.
@@ -98,7 +100,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         ansatz.compile(fullgraph=True, dynamic=True)
 
     data = ExperimentLightningDataModule(experiment, n_elements, dim, batch_size, shuffle,
-                                         n_workers, pin_memory, persistent_workers,
+                                         n_workers, pin_memory, persistent_workers, augment,
                                          device=device, dtype=dtype)
 
     PATH = os.path.dirname(__file__) + os.sep + f'{experiment}_logs' + os.sep + f'{ansatz.model_name}_{data.batch_size}'
