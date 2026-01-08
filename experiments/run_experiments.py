@@ -84,6 +84,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                                                    **ansatz_kwargs).to(device=device, dtype=dtype)
 
     ansatz.configure_input_array()
+
     if device == 'cuda':
         ansatz.compile(fullgraph=True, dynamic=True,
                        options={"triton.cudagraphs": True,

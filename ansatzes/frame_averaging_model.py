@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 from ansatz_utils import get_model, LinearWeightedFrame, NonLinearWeightedFrame
-from ansatzes import BiLipschitzAntiSymmetricModel
+from ansatz_utils import AnInvariantEmbedding
 
 
 class AfaNetModel(nn.Module):
@@ -47,11 +47,29 @@ class AfaNetModel(nn.Module):
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **model_kwargs):
         super(AfaNetModel, self).__init__()
         if embedding_dim is None:
-            embedding_dim = (2 * in_dim * in_channels) + 1
+            embedding_dim = in_channels * (in_dim - 1) + 1
 
         if an_invariant:
-            unstable_model = BiLipschitzAntiSymmetricModel(in_dim, in_channels, out_dim, embedding_dim, model_name,
-                                                           device, dtype, **model_kwargs)
+            if 'embedding_dim' not in model_kwargs.keys():
+                model_kwargs['embedding_dim'] = 2 * in_channels * in_dim + 1
+
+            model_kwargs['in_dim'] = embedding_dim
+            model_kwargs['out_dim'] = out_dim
+            model_kwargs['device'] = device
+            model_kwargs['dtype'] = dtype
+            model_kwargs['in_channels'] = in_channels
+
+            if model_name in ['ds', 'deepsets', 'deepset']:
+                model_kwargs['new_dim'] = True
+                model_kwargs['in_dim'] = 1
+
+            if 'biases' in model_kwargs.keys():
+                if isinstance(model_kwargs['biases'], bool):
+                    if model_kwargs['biases']:
+                        model_kwargs['biases'] = 'all_but_last'
+
+            unstable_model = nn.Sequential(AnInvariantEmbedding(in_dim, in_channels, model_kwargs.pop('embedding_dim')),
+                                           get_model(model_name, **model_kwargs))
 
         else:
             model_kwargs['in_dim'] = in_dim
@@ -59,6 +77,10 @@ class AfaNetModel(nn.Module):
             model_kwargs['device'] = device
             model_kwargs['dtype'] = dtype
             model_kwargs['in_channels'] = in_channels
+
+            self.flatten = flatten
+            self.an_invariant = an_invariant
+
             if flatten:
                 model_kwargs['in_dim'] *= in_channels
                 unstable_model = nn.Sequential(nn.Flatten(-2, -1), get_model(model_name, **model_kwargs))
@@ -77,7 +99,12 @@ class AfaNetModel(nn.Module):
             raise NotImplementedError("Only 'linear' and 'nonlinear' are accepted for 'frame_name' parameter.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.frames(x)
+        out = self.frames(x)
+        if self.an_invariant or self.flatten:
+            self.frames.unstable_function[1].reset_dropout()
+        else:
+            self.frames.unstable_function.reset_dropout()
+        return out
 
 
 if __name__ == '__main__':

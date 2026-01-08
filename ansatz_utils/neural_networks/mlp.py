@@ -1,8 +1,50 @@
 from typing import Optional, Union, Iterable
-from math import sqrt
+
 import torch
 from torch import nn
+
 from .activations import get_activation
+from .dropout import DropoutEquivariant
+
+
+class AffineBlock(nn.Module):
+    def __init__(self, in_dim: int, out_dim: int, bias: Optional[bool] = True,
+                 activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
+                 layer_norm: Optional[bool] = False,
+                 elementwise_affine: Optional[bool] = True,
+                 dropout_p: Optional[float] = 0.0,
+                 device=torch.device('cpu'), dtype=torch.float64):
+        super(AffineBlock, self).__init__()
+
+        if layer_norm:
+            layer = [
+                nn.Linear(in_dim, out_dim, bias),
+                nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine),
+                get_activation(activation, activation_constant),
+            ]
+        else:
+            layer = [
+                nn.Linear(in_dim, out_dim, bias),
+                get_activation(activation, activation_constant),
+            ]
+        with torch.no_grad():
+            nn.init.xavier_uniform_(layer[0].weight, gain=nn.init.calculate_gain('relu'))
+
+        self.layer = nn.Sequential(*layer).to(device=device, dtype=dtype)
+        self.dropout = None
+
+        if dropout_p > 0:
+            self.dropout = DropoutEquivariant(out_dim, dropout_p).to(device=device, dtype=dtype)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.dropout is None:
+            return self.layer(x)
+        return self.dropout(self.layer(x))
+
+    def reset_dropout(self):
+        if self.dropout is None:
+            return
+        self.dropout.reset_parameters()
 
 
 class MLP(nn.Module):
@@ -64,6 +106,7 @@ class MLP(nn.Module):
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
                  layer_norm: Optional[Union[bool, Iterable[bool], str]] = False,
                  elementwise_affine: Optional[bool] = True,
+                 dropout_p: Optional[float] = 0.0,
                  device=torch.device('cpu'), dtype=torch.float64, **kwargs):
         super(MLP, self).__init__()
         if hidden_layers is None:
@@ -72,52 +115,58 @@ class MLP(nn.Module):
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.layer_dims = [in_dim] + hidden_layers + [out_dim]
+        self.depth = len(self.layer_dims) - 1
 
         if isinstance(biases, bool):
-            biases = [biases] * (len(self.layer_dims) - 1)
+            biases = [biases] * self.depth
         elif biases == 'all_but_last':
-            biases = [True] * (len(self.layer_dims) - 1)
+            biases = [True] * self.depth
             biases[-1] = False
         else:
             biases = list(biases)
-            assert len(biases) == len(self.layer_dims) - 1
+            assert len(biases) == self.depth
 
         if isinstance(layer_norm, bool):
-            layer_norm = [layer_norm] * (len(self.layer_dims) - 1)
+            layer_norm = [layer_norm] * self.depth
         elif layer_norm == 'all_but_last':
-            layer_norm = [True] * (len(self.layer_dims) - 1)
+            layer_norm = [True] * self.depth
             layer_norm[-1] = False
         else:
             layer_norm = list(layer_norm)
-            assert len(layer_norm) == len(self.layer_dims) - 1
+            assert len(layer_norm) == self.depth
 
-        layers = [nn.Linear(self.layer_dims[0], self.layer_dims[1], bias=biases[0])]
-        with torch.no_grad():
-            nn.init.xavier_uniform_(layers[-1].weight, gain=nn.init.calculate_gain('relu'))
+        activations = [activation] * self.depth
+        activations[-1] = 'identity'
 
-        if layer_norm[0]:
-            layers.append(nn.LayerNorm(self.layer_dims[1], bias=biases[0], elementwise_affine=elementwise_affine))
+        dropout_p = [dropout_p] * self.depth
+        dropout_p[-1] = 0.0
 
-        for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[1:-1], self.layer_dims[2:])):
-            layers.append(get_activation(activation, activation_constant))
+        self.layers = nn.ModuleList([])
+        for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[:-1], self.layer_dims[1:])):
+            self.layers.append(
+                AffineBlock(in_dim, out_dim, biases[i], activations[i], activation_constant,
+                            layer_norm[i], elementwise_affine, dropout_p[i], device, dtype)
+            )
 
-            layers.append(nn.Linear(in_dim, out_dim, bias=biases[i + 1]))
-            with torch.no_grad():
-                nn.init.xavier_uniform_(layers[-1].weight, nn.init.calculate_gain('relu'))
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        y = self.layers[0](x)
+        for layer in self.layers[1:]:
+            y = layer(y)
+        return y
 
-            if layer_norm[i+1]:
-                layers.append(nn.LayerNorm(out_dim, bias=biases[i+1], elementwise_affine=elementwise_affine))
-
-        self.layers = nn.Sequential(*layers).to(device=device, dtype=dtype)
-
-    def forward(self, x):
-        return self.layers(x)
+    def reset_dropout(self):
+        for i in range(self.depth):
+            self.layers[i].reset_dropout()
 
 
 if __name__ == '__main__':
     pass
 
-    mlp = MLP(5, 7, [3, 10, 2], True, layer_norm=True)
+    X = torch.rand(10, 3, 2, 5, dtype=torch.float64)
+    mlp = MLP(5, 7, [3, 10, 2], 'all_but_last', layer_norm='all_but_last',
+              dtype=torch.float64, dropout_p=0.1)
+    print(mlp)
+
     X = torch.rand(10, 3, 2, 5, dtype=torch.float64)
 
     print(mlp(X).shape)

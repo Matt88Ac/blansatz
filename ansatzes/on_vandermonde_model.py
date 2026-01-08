@@ -92,8 +92,12 @@ class OnVandermondeModel(nn.Module):
 
         if self.single_model:
             fx = self.model(x).reshape(*shape, self.embedding_dim, self.out_dim)
+            self.model.reset_dropout()
         else:
             fx = torch.cat([model(x).unsqueeze(-2) for model in self.model_list], dim=-2)
+            for i in range(len(self.model_list)):
+                self.model_list[i].reset_dropout()
+
         fx = (fx * vandermonde_determinant(proj_x)).sum(dim=-2)
         return fx
 

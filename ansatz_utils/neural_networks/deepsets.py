@@ -76,13 +76,14 @@ class DeepSets(nn.Module):
                  activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
                  layer_norm: Optional[Union[bool, Iterable[bool], str]] = False,
                  elementwise_affine: Optional[bool] = True,
+                 dropout_p: Optional[float] = 0.0,
                  device=torch.device('cpu'), dtype=torch.float64, **kwargs):
         super(DeepSets, self).__init__()
         if new_dim:
             assert in_dim == 1
             swap_last_axes = False
         self.mlp = MLP(in_dim, out_dim, hidden_layers, biases, activation, activation_constant,
-                       layer_norm, elementwise_affine, device, dtype)
+                       layer_norm, elementwise_affine, dropout_p, device, dtype)
         self.new_dim = new_dim
         self.swap_last_axes = swap_last_axes
         self.agg = get_aggregation(
@@ -102,6 +103,9 @@ class DeepSets(nn.Module):
                 assert x.size(-1) == self.mlp.in_dim
                 fx = self.mlp(x)
         return self.agg(fx)
+
+    def reset_dropout(self):
+        self.mlp.reset_dropout()
 
 
 

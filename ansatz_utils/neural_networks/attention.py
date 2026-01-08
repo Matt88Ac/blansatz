@@ -176,8 +176,10 @@ class Transformer(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         fx = self.agg(self.layers(x)).mean(dim=-1)
-
         return fx
+
+    def reset_dropout(self):
+        pass
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 from .activations import get_activation, nn
 from .aggregations import get_aggregation
+from .dropout import DropoutEquivariant
 from .mlp import MLP
 from .deepsets import DeepSets
 from .attention import Transformer

@@ -61,7 +61,9 @@ class BiLipschitzAntiSymmetricModel(nn.Module):
         self.model = get_model(model_name, **model_kwargs)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return (self.model(self.mu(x)) - self.model(self.mu(x[..., self.tau]))) / 2
+        out = (self.model(self.mu(x)) - self.model(self.mu(x[..., self.tau]))) / 2
+        self.model.reset_dropout()
+        return out
 
 
 if __name__ == '__main__':

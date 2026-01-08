@@ -273,8 +273,8 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
             stable_func = f_x.squeeze(-2) - (weight_hat * (f_x + f_tx)).sum(dim=-2)
 
         else:
-            f_x: Tensor = self.unstable_function(x).unsqueeze(1)
-            f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]]).clone().unsqueeze(1)
+            f_x: Tensor = self.unstable_function(x, False).unsqueeze(1)
+            f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]], False).clone().unsqueeze(1)
             stable_func = f_x - (weight_hat.sum(dim=-1, keepdim=True) * (f_x + f_tx))
 
         return stable_func
