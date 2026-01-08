@@ -48,6 +48,12 @@ class ProjectiveSorting(nn.Module):
         super(ProjectiveSorting, self).__init__()
         self.spatial_projector = nn.Linear(in_dim, projection_dim, bias=False)
 
+        self.reset_parameters()
+
+    @torch.no_grad()
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.spatial_projector.weight, gain=nn.init.calculate_gain('relu'))
+
     def forward(self, x: Tensor, sorted_not_proj_needed: bool) -> Tuple[Tensor, Tensor]:
         """
         Args:
