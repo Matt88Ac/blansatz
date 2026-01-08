@@ -21,6 +21,7 @@ def parse_to_experiment(parsed_args):
         except RuntimeError:
             pass
         torch.cuda.empty_cache()
+        torch.set_float32_matmul_precision('high')
         torch.backends.cudnn.benchmark = True
     run_experiments.run_experiment(parsed_args.experiment, parsed_args.n_elements, parsed_args.dim,
                                    parsed_args.ansatz_name,
@@ -119,7 +120,6 @@ def parser_def():
                         help='Number of validation samples to generate.')
     parser.add_argument('--generate_n_test', type=int, required=False, default=20_000,
                         help='Number of test samples to generate.')
-    parser.print_help()
     return parser.parse_args()
 
 
