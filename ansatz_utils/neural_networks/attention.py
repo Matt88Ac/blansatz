@@ -59,6 +59,10 @@ class SnEquivariantAttentionBlock(nn.Module):
         self.num_heads = num_heads
         self.out_layer = nn.Linear(in_dim, out_dim, bias=bias, device=device, dtype=dtype)
 
+        with torch.no_grad():
+            nn.init.xavier_uniform_(self.qkv.weight)
+            nn.init.xavier_uniform_(self.out_layer.weight)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         q, k, v = self.qkv(x.swapaxes(-1, -2)).chunk(3, dim=-1)
 
