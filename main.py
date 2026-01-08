@@ -33,6 +33,7 @@ def parse_to_experiment(parsed_args):
                                    parsed_args.gradient_clip_val, parsed_args.gradient_clip_algorithm,
                                    parsed_args.accumulate_grad,
                                    parsed_args.batch_size, parsed_args.shuffle,
+                                   parsed_args.augment,
                                    parsed_args.n_workers, parsed_args.pin_memory, parsed_args.persistent_workers,
                                    parsed_args.device,
                                    torch.float32 if parsed_args.dtype == 'float32' else torch.float64,
@@ -90,6 +91,9 @@ def parser_def():
                         help='Maximum number of training epochs.')
     parser.add_argument('--batch_size', type=int, required=False, default=512, help='Batch size for training.')
     parser.add_argument('--shuffle', type=bool, required=False, default=True, help='Whether to shuffle the data.')
+
+    parser.add_argument('--augment', type=int, required=False, default=0,
+                        help='Number of augmentations to apply to the input data.')
     
     parser.add_argument('--n_workers', type=int, required=False, default=16,
                         help='Number of worker processes for data loading.')
