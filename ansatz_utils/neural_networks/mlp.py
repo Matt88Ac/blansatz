@@ -93,8 +93,7 @@ class MLP(nn.Module):
 
         layers = [nn.Linear(self.layer_dims[0], self.layer_dims[1], bias=biases[0])]
         with torch.no_grad():
-            nn.init.xavier_uniform_(layers[-1].weight,
-                                    gain=sqrt(in_dim)*nn.init.calculate_gain('relu') / len(self.layer_dims))
+            nn.init.xavier_uniform_(layers[-1].weight, gain=nn.init.calculate_gain('relu'))
 
         if layer_norm[0]:
             layers.append(nn.LayerNorm(self.layer_dims[1], bias=biases[0], elementwise_affine=elementwise_affine))
@@ -104,8 +103,7 @@ class MLP(nn.Module):
 
             layers.append(nn.Linear(in_dim, out_dim, bias=biases[i + 1]))
             with torch.no_grad():
-                nn.init.xavier_uniform_(layers[-1].weight,
-                                        gain=sqrt(in_dim)*nn.init.calculate_gain('relu') / len(self.layer_dims))
+                nn.init.xavier_uniform_(layers[-1].weight, nn.init.calculate_gain('relu'))
 
             if layer_norm[i+1]:
                 layers.append(nn.LayerNorm(out_dim, bias=biases[i+1], elementwise_affine=elementwise_affine))
