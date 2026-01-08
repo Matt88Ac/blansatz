@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmResta
 
 AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd'}
 AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
-AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare'}
+AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard'}
 
 
 class MeanAbsoluteRelativeError(torch.nn.Module):
@@ -16,10 +16,22 @@ class MeanAbsoluteRelativeError(torch.nn.Module):
         super(MeanAbsoluteRelativeError, self).__init__()
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        zeros = (target == 0).to(dtype=target.dtype)
-        loss = (target - prediction) / (target + zeros)
-        loss = loss.abs().nanmean()
-        return loss
+        return torch.where(
+            torch.isclose(target, torch.zeros_like(target)),
+            prediction,
+            (target - prediction) / target
+        ).abs().nanmean()
+
+
+class MeanAbsoluteRelativeDistance(torch.nn.Module):
+    """Symmetric Mean Absolute Relative Error"""
+
+    def __init__(self):
+        super(MeanAbsoluteRelativeDistance, self).__init__()
+        self.error = MeanAbsoluteRelativeError()
+
+    def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return (self.error(prediction, target) + self.error(target, prediction)) / 2
 
 
 def get_loss(loss: str) -> torch.nn.Module:
@@ -36,6 +48,8 @@ def get_loss(loss: str) -> torch.nn.Module:
         return torch.nn.SmoothL1Loss(beta=0.5)
     elif loss.lower() == 'mare':
         return MeanAbsoluteRelativeError()
+    elif loss.lower() == 'mard':
+        return MeanAbsoluteRelativeDistance()
 
 
 def get_optimizer(optimizer: AVAILABLE_OPTIMIZERS, *args, **kwargs) -> partial:
@@ -75,5 +89,3 @@ def get_dtype(dtype: str) -> torch.dtype:
 
     elif '16' in dtype:
         return torch.float16
-
-
