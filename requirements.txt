@@ -6,3 +6,4 @@ seaborn==0.13.2
 torch==2.5.0 --index-url https://download.pytorch.org/whl/cu121
 tqdm==4.67.1
 tensorboard==2.20.0
+torch_optimizer==0.3.0
