@@ -87,6 +87,10 @@ class ProjectiveSorting(nn.Module):
     def weights(self):
         return self.spatial_projector.weight
 
+    @property
+    def embedding_dim(self):
+        return self.spatial_projector.out_features
+
 
 class AnInvariantEmbedding(nn.Module):
     """ 
@@ -116,6 +120,8 @@ class AnInvariantEmbedding(nn.Module):
 
     def __init__(self, in_dim: int, in_channels: int, embedding_dim: int):
         super(AnInvariantEmbedding, self).__init__()
+
+        self.in_channels = in_channels
         self.channel_projection = nn.Parameter(torch.empty(embedding_dim, in_channels + 1))
         self.projection_sorting = ProjectiveSorting(in_dim, embedding_dim)
 
@@ -131,9 +137,11 @@ class AnInvariantEmbedding(nn.Module):
         out_x = torch.cat([sorted_proj_x,
                            diff_proj_x.sign().prod(dim=-1, keepdim=True) * diff_proj_x.abs().min(dim=-1, keepdim=True)[
                                0]], dim=-1)
-        *size, M, N = out_x.shape
-        size = [1] * len(size)
-        return (self.channel_projection.view(*size, M, N) * out_x).sum(dim=-1)
+
+        size = [1] * (out_x.dim() - 2)
+        return (self.channel_projection.contiguous().view(*size,
+                                                          self.projection_sorting.embedding_dim,
+                                                          self.in_channels + 1) * out_x).sum(dim=-1)
 
 
 if __name__ == '__main__':

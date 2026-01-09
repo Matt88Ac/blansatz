@@ -64,6 +64,9 @@ class OnVandermondeModel(nn.Module):
         self.spatial_projector = nn.Parameter(uniform_sphere_sampling(embedding_dim, in_dim).to(device, dtype),
                                               requires_grad=trainable_weights)
 
+        self.in_dim = in_dim
+        self.in_channels = in_channels
+
         model_kwargs['in_dim'] = in_dim
         model_kwargs['device'] = device
         model_kwargs['dtype'] = dtype
@@ -81,17 +84,21 @@ class OnVandermondeModel(nn.Module):
             self.model_list = nn.ModuleList([get_model(model_name, **model_kwargs) for i in range(embedding_dim)])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        *shape, d, n = x.shape
-        N = n * (n - 1) / 2
+        N = self.in_channels * (self.in_channels - 1) / 2
         proj_x = nn.functional.linear(x.clone().swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1)
 
         weights = torch.float_power(
             torch.norm(vandermonde_determinant(proj_x), p=2, dim=-2, keepdim=True),
             1 / N).clone()
-        proj_x = proj_x / (weights + (weights == 0).to(dtype=weights.dtype))
+
+        proj_x = torch.where(
+            torch.isclose(weights, torch.zeros_like(weights)),
+            proj_x,
+            proj_x / weights
+        ).nan_to_num(0, 0, 0)
 
         if self.single_model:
-            fx = self.model(x).reshape(*shape, self.embedding_dim, self.out_dim)
+            fx: torch.Tensor = torch.unflatten(self.model(x), -1, (self.embedding_dim, self.out_dim))
             self.model.reset_dropout()
         else:
             fx = torch.cat([model(x).unsqueeze(-2) for model in self.model_list], dim=-2)
@@ -107,18 +114,24 @@ class OnVandermondeModel(nn.Module):
 
 
 if __name__ == '__main__':
+    pass
     b, d, n = 10, 3, 15
     from ansatz_utils import random_negative_permutation
-    model = OnVandermondeModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', aggregation='max',
-                               model_name='transformer',
-                               single_model=False)
+    model = OnVandermondeModel(d, n, 4, hidden_layers=[5, 100, 3], device='cuda', aggregation='max',
+                               model_name='ds',
+                               single_model=True)
 
+    X = torch.rand(b, d, n, dtype=torch.float64, device='cuda') * 10
+    model.compile(dynamic=True)
+    print(model(X).shape)
+    exit(0)
+#
     for i in range(100):
-        X = torch.rand(b, d, n, dtype=torch.float64, device='cpu') * 10
-        rand_x = X[..., random_negative_permutation(n)]
-        rand_x = rand_x[..., random_negative_permutation(n)]
+        X = torch.rand(b, d, n, dtype=torch.float64, device='cuda') * 10
+        rand_x = X[..., random_negative_permutation(n, device='cuda')]
+        rand_x = rand_x[..., random_negative_permutation(n, device='cuda')]
         assert torch.allclose(model(X), model(rand_x))
-        rand_x = X[..., random_negative_permutation(n)]
+        rand_x = X[..., random_negative_permutation(n, device='cuda')]
         assert torch.allclose(model(X), -model(rand_x))
 
     print(model(X).shape)

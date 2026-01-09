@@ -26,6 +26,7 @@ class AsWeightedFrame(nn.Module):
         projection_sorting (ProjectiveSorting): 
             An instance of the ProjectiveSorting class to compute weights and signs for the frames.
     """
+
     def __init__(self, in_dim: int, in_channels: int, n_frames: int):
         """
         
@@ -38,7 +39,7 @@ class AsWeightedFrame(nn.Module):
                 ws_function: Union[nn.Module, partial, FunctionType, MethodType],
                 x: Tensor,
                 an_invariant: bool = False) -> Tensor:
-        
+
         """
         Args: 
             ws_function (Union[nn.Module, partial, FunctionType, MethodType]):
@@ -130,9 +131,10 @@ class WeakStabilizeWeightedFrame(nn.Module):
         >>> SF(X)
         tensor([[0.0]], dtype=torch.float64)
     """
+
     def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
                  an_invariant: bool = False,
-                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
+                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, *args, **kwargs):
         super(WeakStabilizeWeightedFrame, self).__init__()
         self.weighted_frame = AsWeightedFrame(in_dim, in_channels, n_frames).to(device=device, dtype=dtype)
         self.transpositions = nn.Parameter(all_transpositions(in_channels, device=device), requires_grad=False)
@@ -186,11 +188,12 @@ class NonLinearWeightedFrame(WeakStabilizeWeightedFrame):
         dtype (Optional):
             The data type to use. Default is torch.float64.
     """
+
     def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
                  an_invariant: bool = False,
-                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
+                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, *args, **kwargs):
         super(NonLinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
-                                                     device, dtype)
+                                                     device, dtype, *args, **kwargs)
 
     def stable_forward(self, sorted_x: Tensor, x: Tensor = None) -> Tensor:
         """
@@ -206,15 +209,14 @@ class NonLinearWeightedFrame(WeakStabilizeWeightedFrame):
         if not self.an_invariant:
             sorted_x = sorted_x.unsqueeze(-3)
             f_x: Tensor = self.unstable_function(sorted_x)
-            f_tx: Tensor = self.unstable_function(
-                torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1)
-            )
-            stable_func = f_x.sign() * torch.sqrt(0.5 * f_x.abs() * (f_x - f_tx).abs().min(dim=-2, keepdim=True)[0])
+            stable_func = f_x.sign() * torch.sqrt(0.5 * f_x.abs() * (f_x - self.unstable_function(
+                torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2),
+                                     -1))).abs().min(dim=-2, keepdim=True)[0])
             stable_func = stable_func.sum(dim=-2)
         else:
             f_x: Tensor = self.unstable_function(x)
-            f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]])
-            stable_func = f_x.sign() * torch.sqrt(0.5 * f_x.abs() * (f_x - f_tx).abs())
+            stable_func = f_x.sign() * torch.sqrt(
+                0.5 * f_x.abs() * (f_x - self.unstable_function(x[..., self.transpositions[0]])).abs())
             stable_func = stable_func.unsqueeze(1)
         return stable_func
 
@@ -233,18 +235,17 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
             The number of frames to use.
         an_invariant (bool, optional):
             Whether the function is An-invariant or not. Default is False.
-        p_norm (Union[str, int]):
-            The p-norm to use for sub-weight calculation. Default is 'fro'.
         device (Optional):
             The device to use. Default is CPU.
         dtype (Optional):
             The data type to use. Default is torch.float64.
     """
+
     def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
                  an_invariant: bool = False,
-                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64):
+                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, *args, **kwargs):
         super(LinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
-                                                  device, dtype)
+                                                  device, dtype, *args, **kwargs)
         self.p_norm = 'fro'
 
     def stable_forward(self, sorted_x: Tensor, x: Tensor = None) -> Tensor:
@@ -280,6 +281,77 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
         return stable_func
 
 
+class SoftNonLinearWeightedFrame(WeakStabilizeWeightedFrame):
+    """
+    This class implements a non-linear weakly-stabilizing weighted frame averaging, using soft-sign function, as described in our work.
+    Args:
+        unstable_function (nn.Module):
+            The unstable function to be stabilized.
+        in_dim (int):
+            The input dimension of the function.
+        in_channels (int):
+            The number of input channels.
+        n_frames (int):
+            The number of frames to use.
+        an_invariant (bool, optional):
+            Whether the function is An-invariant or not. Default is False.
+        soft (bool, optional):
+            Whether to use soft-sign (True) or hard-tanh (False) as the non-linear activation. Default is True.
+        device (Optional):
+            The device to use. Default is CPU.
+        dtype (Optional):
+            The data type to use. Default is torch.float64.
+    """
+
+    def __init__(self, unstable_function: nn.Module, in_dim: int, in_channels: int, n_frames: int,
+                 an_invariant: Optional[bool] = False,
+                 soft: Optional[bool] = True,
+                 device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, *args, **kwargs):
+        super(SoftNonLinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
+                                                         device, dtype, *args, **kwargs)
+
+        if soft:
+            self.activation = nn.Softsign()
+        else:
+            self.activation = nn.Hardtanh()
+
+    def stable_forward(self, sorted_x: Tensor, x: Tensor = None) -> Tensor:
+        """
+        This method implements the non-linear weakly-stabilizing transformation.
+        Args:
+            sorted_x (Tensor):
+                The sorted input tensor.
+            x (Tensor):
+                The original input tensor (used if the function is An-invariant).
+        Returns:
+            Tensor: The weakly-stabilized output.
+        """
+        if not self.an_invariant:
+            sorted_x = sorted_x.unsqueeze(-3)
+            f_x: Tensor = self.unstable_function(sorted_x)
+            diff: Tensor = 0.5 * (f_x - self.unstable_function(torch.take_along_dim(
+                sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1))
+                            ).abs().min(dim=-2, keepdim=True)[0]
+
+            stable_func = torch.where(
+                torch.isclose(torch.abs(f_x), diff),
+                f_x,
+                f_x * self.activation(diff / (torch.abs(f_x) - diff).abs())
+            )
+            stable_func = stable_func.sum(dim=-2)
+        else:
+            f_x: Tensor = self.unstable_function(x)
+            diff: Tensor = 0.5 * (f_x - self.unstable_function(x[..., self.transpositions[0]])).abs()
+            stable_func = torch.where(
+                torch.isclose(torch.abs(f_x), diff),
+                f_x,
+                f_x * self.activation(diff / (torch.abs(f_x) - diff).abs())
+            )
+            stable_func = stable_func.unsqueeze(1)
+
+        return stable_func
+
+
 if __name__ == '__main__':
     from neural_networks import MLP
 
@@ -289,6 +361,6 @@ if __name__ == '__main__':
 
     X[0, :, 0] = X[0, :, 3]
 
-    SF = LinearWeightedFrame(F, d, n, 130, an_invariant=False,)
+    SF = SoftNonLinearWeightedFrame(F, d, n, 130, an_invariant=False, soft=False)
 
     print(SF(X))

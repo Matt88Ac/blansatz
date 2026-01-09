@@ -3,7 +3,7 @@ from typing import Optional, Union, Iterable
 import torch
 from torch import nn
 
-from .aggregations import get_aggregation, partial
+from .aggregations import get_aggregation, Aggregation
 from .mlp import MLP
 
 
@@ -47,7 +47,7 @@ class DeepSets(nn.Module):
     Attributes:
        mlp (nn.Module):
            An MLP model that defines the architecture.
-       agg (partial):
+       agg (Aggregation):
               An aggregation function.
        swap_last_axes (bool):
            Whether to swap between the last two axes, upon the forward pass. Default: True.

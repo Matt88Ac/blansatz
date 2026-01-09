@@ -4,4 +4,4 @@ from .permutation_actions import (random_negative_permutation, random_transposit
                                   random_positive_permutation)
 from .permutation_actions import vectorized_permutation_sign, all_transpositions
 from .projective_layers import AnInvariantEmbedding, ProjectiveSorting, alternation_separation
-from .frames import NonLinearWeightedFrame, LinearWeightedFrame
+from .frames import NonLinearWeightedFrame, LinearWeightedFrame, SoftNonLinearWeightedFrame

@@ -3,7 +3,7 @@ from typing import Optional
 import torch
 from torch import nn
 
-from ansatz_utils import get_model, LinearWeightedFrame, NonLinearWeightedFrame
+from ansatz_utils import get_model, LinearWeightedFrame, NonLinearWeightedFrame, SoftNonLinearWeightedFrame
 from ansatz_utils import AnInvariantEmbedding
 
 
@@ -21,11 +21,13 @@ class AfaNetModel(nn.Module):
         embedding_dim (int, optional):
             The dimension of the embedding. If None, it is computed as (2 * in_dim * in_channels) + 1.
         frame_name (str, optional):
-            The name of the frame averaging module to use. Must be either 'linear' or 'nonlinear'. Default is 'nonlinear'.
+            The name of the frame averaging module to use. Must be either 'linear', 'nonlinear' or 'soft_nonlinear'. Default is 'nonlinear'.
         model_name (str, optional):
             The name of the unstable model to use. Default is 'mlp'.
         an_invariant (bool, optional):
             Whether to use an An-invariant unstable model. Default is False.
+        soft (bool, optional):
+            Whether to use soft-sign (True) or hard-tanh (False) as the non-linear activation. Used when frame_name is 'soft_nonlinear'. Default is True.
         flatten (bool, optional):
             Whether to flatten the input before passing it to the unstable model (only if an_invariant is False). Default is False.
         device (Optional):
@@ -39,13 +41,19 @@ class AfaNetModel(nn.Module):
         frames (nn.Module):
             A weakly-stabilizing frame averaging module (either linear or nonlinear) that processes the input using the unstable model.
     """
+
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
                  frame_name: Optional[str] = 'nonlinear',
                  model_name: Optional[str] = 'mlp',
                  an_invariant: Optional[bool] = False,
+                 soft: Optional[bool] = True,
                  flatten: Optional[bool] = False,
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, **model_kwargs):
         super(AfaNetModel, self).__init__()
+
+        self.flatten = flatten
+        self.an_invariant = an_invariant
+
         if embedding_dim is None:
             embedding_dim = in_channels * (in_dim - 1) + 1
 
@@ -53,7 +61,7 @@ class AfaNetModel(nn.Module):
             if 'embedding_dim' not in model_kwargs.keys():
                 model_kwargs['embedding_dim'] = 2 * in_channels * in_dim + 1
 
-            model_kwargs['in_dim'] = embedding_dim
+            model_kwargs['in_dim'] = model_kwargs['embedding_dim']
             model_kwargs['out_dim'] = out_dim
             model_kwargs['device'] = device
             model_kwargs['dtype'] = dtype
@@ -78,9 +86,6 @@ class AfaNetModel(nn.Module):
             model_kwargs['dtype'] = dtype
             model_kwargs['in_channels'] = in_channels
 
-            self.flatten = flatten
-            self.an_invariant = an_invariant
-
             if flatten:
                 model_kwargs['in_dim'] *= in_channels
                 unstable_model = nn.Sequential(nn.Flatten(-2, -1), get_model(model_name, **model_kwargs))
@@ -95,8 +100,13 @@ class AfaNetModel(nn.Module):
             self.frames = NonLinearWeightedFrame(unstable_model, in_dim, in_channels, embedding_dim, an_invariant,
                                                  device, dtype)
 
+        elif frame_name == 'soft_nonlinear':
+            self.frames = SoftNonLinearWeightedFrame(unstable_model, in_dim, in_channels, embedding_dim,
+                                                     an_invariant, soft, device, dtype)
+
         else:
-            raise NotImplementedError("Only 'linear' and 'nonlinear' are accepted for 'frame_name' parameter.")
+            raise NotImplementedError(
+                "Only 'linear', 'nonlinear' and 'soft_nonlinear' are accepted for 'frame_name' parameter.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.frames(x)
@@ -109,10 +119,11 @@ class AfaNetModel(nn.Module):
 
 if __name__ == '__main__':
     b, d, n = 10, 3, 15
-    model = AfaNetModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', model_name='mlp', an_invariant=True)
+    model = AfaNetModel(d, n, 4, hidden_layers=[5, 100, 3], device='cpu', model_name='mlp', an_invariant=False,
+                        flatten=True,
+                        frame_name='soft_nonlinear')
 
     print(model)
-    exit(0)
 
     temp = torch.rand(b, d, n, dtype=torch.float64, device='cpu') * 1000
 
