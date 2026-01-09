@@ -2,9 +2,11 @@ from functools import partial
 
 import torch
 from torch.optim import Adam, AdamW, Adamax, Adagrad, Rprop, RMSprop, SGD, NAdam
+from torch_optimizer import Adahessian, Shampoo
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmRestarts, CosineAnnealingLR
 
-AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd'}
+AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd', 'adahessian',
+                        'shampoo'}
 AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
 AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard'}
 
@@ -52,7 +54,7 @@ def get_loss(loss: str) -> torch.nn.Module:
         return MeanAbsoluteRelativeDistance()
 
 
-def get_optimizer(optimizer: AVAILABLE_OPTIMIZERS, *args, **kwargs) -> partial:
+def get_optimizer(optimizer: str, *args, **kwargs) -> partial:
     if optimizer.lower() == 'adam':
         return partial(Adam, *args, **kwargs)
     elif optimizer.lower() == 'adamw':
@@ -69,6 +71,12 @@ def get_optimizer(optimizer: AVAILABLE_OPTIMIZERS, *args, **kwargs) -> partial:
         return partial(Rprop, *args, **kwargs)
     elif optimizer.lower() == 'sgd':
         return partial(SGD, *args, **kwargs)
+    elif optimizer.lower() == 'adahessian':
+        return partial(Adahessian, *args, **kwargs)
+    elif optimizer.lower() == 'shampoo':
+        return partial(Shampoo, *args, **kwargs)
+    else:
+        raise NotImplementedError(f'Optimizer {optimizer} not recognized. Choose one of {AVAILABLE_OPTIMIZERS}.')
 
 
 def get_lr_scheduler(lr_scheduler: AVAILABLE_LR_SCHED, *args, **kwargs) -> partial:
