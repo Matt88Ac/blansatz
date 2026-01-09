@@ -73,6 +73,13 @@ class GeneralTrainer(LightningModule):
         self.model = None
         self.example_input_array_dims = (1, in_dim, in_channels)
 
+        self.automatic_optimization = False
+
+    def only_trainable_parameters(self):
+        for parameter in self.parameters():
+            if parameter.requires_grad:
+                yield parameter
+
     def configure_optimizers(self):
         optimizer = self.optim(self.model.parameters())
         if self.lr_sched is None:
@@ -101,9 +108,21 @@ class GeneralTrainer(LightningModule):
 
     def training_step(self, batch, batch_idx):
         X, y = batch
+
         # _t = time()
         y_hat = self.forward(X)
         loss = self.loss(y_hat, y)
+
+        if not self.automatic_optimization:
+            opt = self.optimizers()
+            opt.zero_grad(set_to_none=True)
+            self.manual_backward(loss, create_graph=True, retain_graph=True)
+            opt.step()
+            if (self.lr_sched is not None) and self.trainer.is_last_batch:
+                lr_scheduler = self.lr_schedulers()
+                if not isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    lr_scheduler.step(epoch=self.current_epoch)
+
         self.log('train_loss', loss, prog_bar=True)
         self.log('train_pred_std', y_hat.std(), prog_bar=True)
         # self.log('train_time', time() - _t)
@@ -123,6 +142,12 @@ class GeneralTrainer(LightningModule):
         with torch.no_grad():
             for metric in self.extra_metrics_names:
                 self.log(f'val_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
+
+    def on_validation_end(self) -> None:
+        if (self.lr_sched is not None) and (not self.automatic_optimization):
+            lr_scheduler = self.lr_schedulers()
+            if isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                lr_scheduler.step(epoch=self.current_epoch, metrics=self.trainer.callback_metrics["val_loss"])
 
     def test_step(self, batch, batch_idx):
         X, y = batch
