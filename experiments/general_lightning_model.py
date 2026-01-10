@@ -1,4 +1,3 @@
-from time import time
 from typing import Optional, Iterable
 
 import torch
@@ -41,6 +40,7 @@ class GeneralTrainer(LightningModule):
                  optimizer_kwargs: Optional[dict] = None,
                  lr_scheduler_kwargs: Optional[dict] = None, loss: Optional[str] = 'mse',
                  extra_metrics: Optional[Iterable[str]] = None,
+                 accumulate_grad_batches: Optional[int] = 1,
                  **ansatz_kwargs):
         super(GeneralTrainer, self).__init__()
 
@@ -73,12 +73,8 @@ class GeneralTrainer(LightningModule):
         self.model = None
         self.example_input_array_dims = (1, in_dim, in_channels)
 
-        self.automatic_optimization = False
-
-    def only_trainable_parameters(self):
-        for parameter in self.parameters():
-            if parameter.requires_grad:
-                yield parameter
+        self.automatic_optimization = optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo'}
+        self.accumulate_grad_batches = accumulate_grad_batches
 
     def configure_optimizers(self):
         optimizer = self.optim(self.model.parameters())
@@ -111,17 +107,20 @@ class GeneralTrainer(LightningModule):
 
         # _t = time()
         y_hat = self.forward(X)
-        loss = self.loss(y_hat, y)
+        loss: torch.Tensor = self.loss(y_hat, y)
 
         if not self.automatic_optimization:
-            opt = self.optimizers()
-            opt.zero_grad(set_to_none=True)
-            self.manual_backward(loss, create_graph=True, retain_graph=True)
-            opt.step()
-            if (self.lr_sched is not None) and self.trainer.is_last_batch:
-                lr_scheduler = self.lr_schedulers()
-                if not isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                    lr_scheduler.step(epoch=self.current_epoch)
+            loss.backward(create_graph=True, retain_graph=True)
+
+            if self.trainer.is_last_batch or ((batch_idx + 1) % self.accumulate_grad_batches == 0):
+                opt = self.optimizers()
+                opt.step()
+                opt.zero_grad(set_to_none=True)
+
+                if (self.lr_sched is not None) and self.trainer.is_last_batch:
+                    lr_scheduler = self.lr_schedulers()
+                    if not isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        lr_scheduler.step(epoch=self.current_epoch)
 
         self.log('train_loss', loss, prog_bar=True)
         self.log('train_pred_std', y_hat.std(), prog_bar=True)
