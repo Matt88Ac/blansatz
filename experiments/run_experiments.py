@@ -81,6 +81,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
 
     ansatz: GeneralTrainer = ANSATZES[ansatz_name](dim, n_elements, out_dim, embedding_dim, model_name,
                                                    optimizer_kwargs, lr_scheduler_kwargs, loss, extra_metrics,
+                                                   accumulate_grad_batches=accumulate_grad_batches,
                                                    **ansatz_kwargs).to(device=device, dtype=dtype)
 
     ansatz.configure_input_array()
@@ -122,6 +123,8 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
             callbacks.EarlyStopping('val_loss', early_stopping_min_delta, early_stopping_patience,
                                     stopping_threshold=0)
         )
+
+    accumulate_grad_batches = accumulate_grad_batches if ansatz.automatic_optimization else 1
 
     if not gradient_clip:
         trainer = Trainer(
