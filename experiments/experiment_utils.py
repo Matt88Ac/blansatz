@@ -21,7 +21,7 @@ class MeanAbsoluteRelativeError(torch.nn.Module):
         return torch.where(
             torch.isclose(target, torch.zeros_like(target)),
             prediction,
-            (target - prediction) / target
+            (target - prediction) / target.norm(dim=-1, keepdim=True)
         ).abs().nanmean()
 
 
