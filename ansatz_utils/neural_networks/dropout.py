@@ -12,7 +12,7 @@ class DropoutEquivariant(torch.nn.Module):
 
     @torch.no_grad()
     def reset_parameters(self):
-        self.mask.bernoulli_(self.p)
+        self.mask.bernoulli_(1-self.p)
         self.mask /= (1 - self.p)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
