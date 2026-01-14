@@ -135,8 +135,7 @@ class GeneralTrainer(LightningModule):
             X, y = batch
             # _t = time()
             y_hat = self.forward(X)
-            loss = self.loss(y_hat, y)
-            self.log(f'val_loss', loss)
+            self.log(f'val_loss', self.loss(y_hat, y), prog_bar=True)
             # self.log('val_time', time() - _t)
             self.log(f'val_pred_std', y_hat.std())
 
@@ -147,7 +146,7 @@ class GeneralTrainer(LightningModule):
         if (self.lr_sched is not None) and (not self.automatic_optimization):
             lr_scheduler = self.lr_schedulers()
             if isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                lr_scheduler.step(epoch=self.current_epoch, metrics=self.trainer.callback_metrics["val_loss"])
+                lr_scheduler.step(self.trainer.callback_metrics["val_loss"])
 
     def test_step(self, batch, batch_idx):
         with torch.no_grad():
