@@ -2,7 +2,7 @@ import argparse
 
 import torch
 from experiments import run_experiments
-from experiments_data import generate_datasets
+from experiments_data import generate_datasets, run_analysis
 
 import json
 
@@ -10,7 +10,8 @@ import json
 def parse_to_generate(parsed_args):
     generate_datasets(parsed_args.experiment, parsed_args.n_elements, parsed_args.dim,
                       parsed_args.generate_n_train, parsed_args.generate_n_val, parsed_args.generate_n_test,
-                      parsed_args.generate_lower, parsed_args.generate_upper)
+                      parsed_args.generate_lower, parsed_args.generate_upper, 
+                      parsed_args.cutoff, parsed_args.cutoff_value, parsed_args.batch_size)
 
 
 def parse_to_experiment(parsed_args):
@@ -124,6 +125,11 @@ def parser_def():
                         help='Number of validation samples to generate.')
     parser.add_argument('--generate_n_test', type=int, required=False, default=20_000,
                         help='Number of test samples to generate.')
+    parser.add_argument('--cutoff', type=bool, required=False, default=False,
+                        help='Whether to apply cutoff scaling to outputs during dataset generation.')
+    parser.add_argument('--cutoff_value', type=float, required=False, default=100.0,
+                        help='The cutoff value for scaling outputs during dataset generation.')
+
     return parser.parse_args()
 
 
@@ -138,6 +144,9 @@ def main():
 
 if __name__ == '__main__':
     # J = '{"an_invariant": false, "frame_name": "nonlinear", "hidden_layers": [128, 128, 128], "activation": "tanh", "biases": "all_but_last"}'
+    # run_analysis(experiment='determinant', n_elements=10, dim=10)
+    # exit(0)
+
     main()
     exit(0)
     # generate_datasets('determinant', 2, 2, 100_000, 10_000, 10_000)

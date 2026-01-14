@@ -2,6 +2,7 @@ import os
 
 from .data_generator import EXPERIMENTS, generate_datasets
 from .data_loader import ExperimentLightningDataModule, ExperimentDataset, dataset_collector
+from .data_analysis import run_analysis
 
 PATH = os.path.dirname(__file__)
 
