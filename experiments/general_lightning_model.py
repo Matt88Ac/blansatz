@@ -123,22 +123,23 @@ class GeneralTrainer(LightningModule):
                         lr_scheduler.step(epoch=self.current_epoch)
 
         self.log('train_loss', loss, prog_bar=True)
-        self.log('train_pred_std', y_hat.std(), prog_bar=True)
         # self.log('train_time', time() - _t)
         with torch.no_grad():
+            self.log('train_pred_std', y_hat.std(), prog_bar=True)
             for metric in self.extra_metrics_names:
                 self.log(f'train_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        X, y = batch
-        # _t = time()
-        y_hat = self.forward(X)
-        loss = self.loss(y_hat, y)
-        self.log(f'val_loss', loss)
-        # self.log('val_time', time() - _t)
-        self.log(f'val_pred_std', y_hat.std())
         with torch.no_grad():
+            X, y = batch
+            # _t = time()
+            y_hat = self.forward(X)
+            loss = self.loss(y_hat, y)
+            self.log(f'val_loss', loss)
+            # self.log('val_time', time() - _t)
+            self.log(f'val_pred_std', y_hat.std())
+
             for metric in self.extra_metrics_names:
                 self.log(f'val_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
 
@@ -149,17 +150,17 @@ class GeneralTrainer(LightningModule):
                 lr_scheduler.step(epoch=self.current_epoch, metrics=self.trainer.callback_metrics["val_loss"])
 
     def test_step(self, batch, batch_idx):
-        X, y = batch
-        # _t = time()
-        y_hat = self.forward(X)
-        loss = self.loss(y_hat, y)
-        self.log(f'test_loss', loss)
-        # self.log('test_time', time() - _t)
-        self.log(f'test_pred_std', y_hat.std())
         with torch.no_grad():
+            X, y = batch
+            # _t = time()
+            y_hat = self.forward(X)
+            loss = self.loss(y_hat, y)
+            self.log(f'test_loss', loss)
+            # self.log('test_time', time() - _t)
+            self.log(f'test_pred_std', y_hat.std())
             for metric in self.extra_metrics_names:
                 self.log(f'test_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
-        return loss
+            return loss
 
 
 class LightningAfaNetModel(GeneralTrainer):
