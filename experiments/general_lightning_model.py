@@ -117,11 +117,6 @@ class GeneralTrainer(LightningModule):
                 opt.step()
                 opt.zero_grad(set_to_none=True)
 
-                if (self.lr_sched is not None) and self.trainer.is_last_batch:
-                    lr_scheduler = self.lr_schedulers()
-                    if not isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                        lr_scheduler.step(epoch=self.current_epoch)
-
         self.log('train_loss', loss, prog_bar=True)
         # self.log('train_time', time() - _t)
         with torch.no_grad():
@@ -147,6 +142,8 @@ class GeneralTrainer(LightningModule):
             lr_scheduler = self.lr_schedulers()
             if isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                 lr_scheduler.step(self.trainer.callback_metrics["val_loss"])
+            else:
+                lr_scheduler.step()
 
     def test_step(self, batch, batch_idx):
         with torch.no_grad():
