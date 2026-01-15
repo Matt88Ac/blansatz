@@ -144,7 +144,7 @@ def main():
 
 if __name__ == '__main__':
     # J = '{"an_invariant": false, "frame_name": "nonlinear", "hidden_layers": [128, 128, 128], "activation": "tanh", "biases": "all_but_last"}'
-    # run_analysis(experiment='determinant', n_elements=10, dim=10)
+    # run_analysis(experiment='determinant', n_elements=12, dim=12)
     # exit(0)
 
     main()
