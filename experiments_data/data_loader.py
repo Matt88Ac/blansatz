@@ -60,6 +60,8 @@ class ExperimentDataset(Dataset):
         if target.dim() == 1:
             target = target.unsqueeze(0)
 
+        # assert torch.allclose(matrix.det(), target)
+
         if self.augment > 0:
             positives = (torch.randn(self.augment) >= 0).int().sum()
             negatives = self.augment - positives
@@ -131,7 +133,7 @@ class ExperimentLightningDataModule(LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=dataset_collector,
                           num_workers=self.n_workers,
-                          pin_memory=self.pin_memory, persistent_workers=False)
+                          pin_memory=self.pin_memory, persistent_workers=self.persistent_workers)
 
 
 if __name__ == '__main__':
