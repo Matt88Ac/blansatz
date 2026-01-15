@@ -50,7 +50,6 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
         os.mkdir(PATH + f'{n_elements}_{dim}{os.sep}test')
 
     for count, name in zip([n_train, n_val, n_test], ['train', 'validation', 'test']):
-        print("generating {} samples... \n".format(name))
         index = 0
         batch = 1
 
@@ -61,10 +60,17 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
         max_val = 0
         min_val = 0
 
-        iter_number = int(np.ceil(count / batch_size))
-        pbar = tqdm(range(iter_number), colour='red', leave=False)
+        iter_number = count // batch_size
+        if iter_number * batch_size > count:
+            iter_number -= 1
+        elif iter_number * batch_size < count:
+            iter_number += 1
+        pbar = tqdm(range(iter_number), colour='red', desc="generating {} samples... \n".format(name), leave=True)
+
         for b in pbar:
             if (sub_count - batch_size) >= count:
+                break
+            if index == count:
                 break
 
             matrix = np.random.uniform(lower, upper, size=(size, dim, n_elements))
@@ -106,5 +112,7 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
             if sub_count + batch_size > count:
                 size = count - sub_count
             sub_count += size
-            if index == count:
-                break
+
+        pbar.reset()
+        pbar.clear()
+        pbar.close()
