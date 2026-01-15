@@ -65,7 +65,7 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
             iter_number -= 1
         elif iter_number * batch_size < count:
             iter_number += 1
-        pbar = tqdm(range(iter_number), colour='red', desc="generating {} samples... \n".format(name), leave=True)
+        pbar = tqdm(range(iter_number), colour='red', desc="generating {} samples...".format(name), leave=True)
 
         for b in pbar:
             if (sub_count - batch_size) >= count:
