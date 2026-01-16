@@ -1,5 +1,14 @@
 from typing import Optional
-from torch import nn
+import torch
+from torch.nn import GELU, SELU, SiLU, Identity, Sigmoid, Softplus, ReLU, LeakyReLU, ELU, Mish, Tanh
+
+
+class Sin(torch.nn.Module):
+    def __init__(self):
+        super(Sin, self).__init__()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.sin(x)
 
 
 def get_activation(activation: str, constant: Optional[float] = 0.01) -> nn.Module:
@@ -19,25 +28,29 @@ def get_activation(activation: str, constant: Optional[float] = 0.01) -> nn.Modu
 
     """
     if activation.lower() == 'identity':
-        return nn.Identity()
+        return Identity()
     elif activation.lower() == 'leakyrelu':
-        return nn.LeakyReLU(negative_slope=constant)
+        return LeakyReLU(negative_slope=constant)
     elif activation.lower() == 'elu':
-        return nn.ELU(alpha=constant)
+        return ELU(alpha=constant)
     elif activation.lower() == 'relu':
-        return nn.ReLU()
+        return ReLU()
     elif activation.lower() == 'silu':
-        return nn.SiLU()
+        return SiLU()
     elif activation.lower() == 'sigmoid':
-        return nn.Sigmoid()
+        return Sigmoid()
     elif activation.lower() == 'softplus':
-        return nn.Softplus(beta=constant)
+        return Softplus(beta=constant)
     elif activation.lower() == 'mish':
-        return nn.Mish()
+        return Mish()
     elif activation.lower() == 'tanh':
-        return nn.Tanh()
+        return Tanh()
     elif activation.lower() == 'selu':
-        return nn.SELU()
+        return SELU()
+    elif activation.lower() == 'gelu':
+        return GELU()
+    elif activation.lower() == 'sin':
+        return Sin()
 
     raise NotImplementedError("Select one of 'leakyrelu', 'elu', 'relu', 'silu', 'sigmoid', 'softplus', 'mish', "
-                              "'identity', 'selu' or 'tanh'")
+                              "'identity', 'selu', 'gelu', 'sin' or 'tanh'")
