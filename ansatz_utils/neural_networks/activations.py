@@ -11,7 +11,7 @@ class Sin(torch.nn.Module):
         return torch.sin(x)
 
 
-def get_activation(activation: str, constant: Optional[float] = 0.01) -> nn.Module:
+def get_activation(activation: str, constant: Optional[float] = 0.01) -> torch.nn.Module:
     """ The function generates an instance of an activation function to the user's choice.
     Args:
         activation (str):
