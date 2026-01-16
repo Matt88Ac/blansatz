@@ -119,7 +119,6 @@ class GeneralTrainer(LightningModule):
             if self.trainer.is_last_batch or ((batch_idx + 1) % self.accumulate_grad_batches == 0):
                 opt = self.optimizers()
                 if self.gradient_clip_val > 0:
-                    print('clipping {} with val = {}'.format(self.gradient_clip_algorithm, self.gradient_clip_val))
                     if self.gradient_clip_algorithm == 'norm':
                         torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
                     else:
