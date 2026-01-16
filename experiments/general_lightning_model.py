@@ -40,6 +40,7 @@ class GeneralTrainer(LightningModule):
                  optimizer_kwargs: Optional[dict] = None,
                  lr_scheduler_kwargs: Optional[dict] = None, loss: Optional[str] = 'mse',
                  extra_metrics: Optional[Iterable[str]] = None,
+                 gradient_clip: Optional[bool] = False,
                  gradient_clip_val: Optional[float] = 0.0,
                  gradient_clip_algorithm: Optional[str] = 'norm',
                  accumulate_grad_batches: Optional[int] = 1,
@@ -77,6 +78,7 @@ class GeneralTrainer(LightningModule):
 
         self.automatic_optimization = optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo'}
         self.accumulate_grad_batches = accumulate_grad_batches
+        self.gradient_clip = gradient_clip
         self.gradient_clip_val = gradient_clip_val
         self.gradient_clip_algorithm = gradient_clip_algorithm
 
@@ -118,7 +120,7 @@ class GeneralTrainer(LightningModule):
 
             if self.trainer.is_last_batch or ((batch_idx + 1) % self.accumulate_grad_batches == 0):
                 opt = self.optimizers()
-                if self.gradient_clip_val > 0:
+                if self.gradient_clip_val > 0 and self.gradient_clip:
                     if self.gradient_clip_algorithm == 'norm':
                         torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
                     else:
