@@ -40,6 +40,8 @@ class GeneralTrainer(LightningModule):
                  optimizer_kwargs: Optional[dict] = None,
                  lr_scheduler_kwargs: Optional[dict] = None, loss: Optional[str] = 'mse',
                  extra_metrics: Optional[Iterable[str]] = None,
+                 gradient_clip_val: Optional[float] = 0.0,
+                 gradient_clip_algorithm: Optional[str] = 'norm',
                  accumulate_grad_batches: Optional[int] = 1,
                  **ansatz_kwargs):
         super(GeneralTrainer, self).__init__()
@@ -75,6 +77,8 @@ class GeneralTrainer(LightningModule):
 
         self.automatic_optimization = optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo'}
         self.accumulate_grad_batches = accumulate_grad_batches
+        self.gradient_clip_val = gradient_clip_val
+        self.gradient_clip_algorithm = gradient_clip_algorithm
 
     def configure_optimizers(self):
         optimizer = self.optim(self.model.parameters())
@@ -114,11 +118,12 @@ class GeneralTrainer(LightningModule):
 
             if self.trainer.is_last_batch or ((batch_idx + 1) % self.accumulate_grad_batches == 0):
                 opt = self.optimizers()
-                if self.trainer.gradient_clip_val > 0:
-                    if self.trainer.gradient_clip_algorithm == 'norm':
-                        torch.nn.utils.clip_grad_norm_(self.parameters(), self.trainer.gradient_clip_val)
+                if self.gradient_clip_val > 0:
+                    print('clipping {} with val = {}'.format(self.gradient_clip_algorithm, self.gradient_clip_val))
+                    if self.gradient_clip_algorithm == 'norm':
+                        torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
                     else:
-                        torch.nn.utils.clip_grad_value_(self.parameters(), self.trainer.gradient_clip_val)
+                        torch.nn.utils.clip_grad_value_(self.parameters(), self.gradient_clip_val)
 
                 opt.step()
                 opt.zero_grad(set_to_none=True)
