@@ -117,7 +117,7 @@ def get_lr_scheduler(lr_scheduler: AVAILABLE_LR_SCHED, *args, **kwargs) -> parti
         return partial(CosineAnnealingLR, *args, **kwargs)
 
     elif lr_scheduler.lower() == 'exp':
-        return partial(ExponentialLR, *ars, **kwargs)
+        return partial(ExponentialLR, *args, **kwargs)
 
 
 def get_dtype(dtype: str) -> torch.dtype:
