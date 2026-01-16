@@ -3,12 +3,12 @@ from functools import partial
 import torch
 from torch.optim import Adam, AdamW, Adamax, Adagrad, Rprop, RMSprop, SGD, NAdam
 from torch_optimizer import Adahessian, Shampoo
-from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmRestarts, CosineAnnealingLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmRestarts, CosineAnnealingLR, ExponentialLR
 
 AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd', 'adahessian',
                         'shampoo'}
 AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
-AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard'}
+AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl'}
 
 
 class MeanAbsoluteRelativeError(torch.nn.Module):
@@ -36,6 +36,31 @@ class MeanAbsoluteRelativeDistance(torch.nn.Module):
         return (self.error(prediction, target) + self.error(target, prediction)) / 2
 
 
+class MeanSquaredLogLoss(torch.nn.Module):
+    """Symmetric Mean Absolute Relative Error"""
+
+    def __init__(self):
+        super(MeanSquaredLogLoss, self).__init__()
+        self.epsilon = 1e-10
+        self.mse = torch.nn.MSELoss()
+
+    def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return self.mse((prediction.abs() + self.epsilon).log(), (target.abs() + self.epsilon).log())
+
+
+class SignedMeanSquaredLogLoss(torch.nn.Module):
+    """Symmetric Mean Absolute Relative Error"""
+
+    def __init__(self):
+        super(SignedMeanSquaredLogLoss, self).__init__()
+        self.mu = 0.1
+        self.msl = MeanSquaredLogLoss()
+        self.bce = torch.nn.BCELoss()
+
+    def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return self.msl(prediction, target) + self.mu * self.bce((prediction.sign() + 1) / 2, (target.sign() + 1) / 2)
+
+
 def get_loss(loss: str) -> torch.nn.Module:
     assert loss.lower() in AVAILABLE_LOSSES, (
         NotImplementedError("Choose on of mse, l1, huber and smooth_l1 as loss functions"))
@@ -52,6 +77,10 @@ def get_loss(loss: str) -> torch.nn.Module:
         return MeanAbsoluteRelativeError()
     elif loss.lower() == 'mard':
         return MeanAbsoluteRelativeDistance()
+    elif loss.lower() == 'msl':
+        return MeanSquaredLogLoss()
+    elif loss.lower() == 'smsl':
+        return SignedMeanSquaredLogLoss()
 
 
 def get_optimizer(optimizer: str, *args, **kwargs) -> partial:
@@ -86,6 +115,9 @@ def get_lr_scheduler(lr_scheduler: AVAILABLE_LR_SCHED, *args, **kwargs) -> parti
         return partial(CosineAnnealingWarmRestarts, *args, **kwargs)
     elif lr_scheduler.lower() == 'cos':
         return partial(CosineAnnealingLR, *args, **kwargs)
+
+    elif lr_scheduler.lower() == 'exp':
+        return partial(ExponentialLR, *ars, **kwargs)
 
 
 def get_dtype(dtype: str) -> torch.dtype:
