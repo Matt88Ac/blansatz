@@ -1,4 +1,5 @@
-from .activations import get_activation, nn
+from torch import nn
+from .activations import get_activation
 from .aggregations import get_aggregation
 from .dropout import DropoutEquivariant
 from .mlp import MLP
