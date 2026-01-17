@@ -246,7 +246,7 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, *args, **kwargs):
         super(LinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
                                                   device, dtype, *args, **kwargs)
-        self.p_norm = 'fro'
+        self.p_norm = 1
 
     def stable_forward(self, sorted_x: Tensor, x: Tensor = None) -> Tensor:
         """
@@ -259,11 +259,9 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
         Returns:
             Tensor: The weakly-stabilized output.
         """
+
+        weight_hat = torch.norm(sorted_x.diff(dim=-1), dim=-2, p=self.p_norm)
         sorted_x = sorted_x.unsqueeze(-3)
-        weight_hat = torch.norm(
-            sorted_x - torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1),
-            dim=[-2, -1], p=self.p_norm
-        )
 
         if not self.an_invariant:
             weight_hat = linear_wsop_sub_weights(weight_hat).unsqueeze(-1)
@@ -271,11 +269,12 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
             f_tx: Tensor = self.unstable_function(
                 torch.take_along_dim(sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1)
             ).clone()
+
             stable_func = f_x.squeeze(-2) - (weight_hat * (f_x + f_tx)).sum(dim=-2)
 
         else:
-            f_x: Tensor = self.unstable_function(x, False).unsqueeze(1)
-            f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]], False).clone().unsqueeze(1)
+            f_x: Tensor = self.unstable_function(x).unsqueeze(1)
+            f_tx: Tensor = self.unstable_function(x[..., self.transpositions[0]]).clone().unsqueeze(1)
             stable_func = f_x - (weight_hat.sum(dim=-1, keepdim=True) * (f_x + f_tx))
 
         return stable_func
@@ -331,7 +330,7 @@ class SoftNonLinearWeightedFrame(WeakStabilizeWeightedFrame):
             f_x: Tensor = self.unstable_function(sorted_x)
             diff: Tensor = 0.5 * (f_x - self.unstable_function(torch.take_along_dim(
                 sorted_x, self.transpositions.unsqueeze(0).unsqueeze(0).unsqueeze(-2), -1))
-                            ).abs().min(dim=-2, keepdim=True)[0]
+                                  ).abs().min(dim=-2, keepdim=True)[0]
 
             stable_func = torch.where(
                 torch.isclose(torch.abs(f_x), diff),
@@ -354,13 +353,15 @@ class SoftNonLinearWeightedFrame(WeakStabilizeWeightedFrame):
 
 if __name__ == '__main__':
     from neural_networks import MLP
+    from projective_layers import AnInvariantEmbedding
 
     b, d, n = 10, 3, 13
-    F = nn.Sequential(nn.Flatten(-2, -1), MLP(n * d, 1, [20, 20, 20]))
+    # F = nn.Sequential(nn.Flatten(-2, -1), MLP(n * d, 1, [20, 20, 20]))
+    F = nn.Sequential(AnInvariantEmbedding(d, n, 50), MLP(50, 1, [20, 20, 20]))
     X = torch.rand(b, d, n, dtype=torch.float64)
 
     X[0, :, 0] = X[0, :, 3]
 
-    SF = SoftNonLinearWeightedFrame(F, d, n, 130, an_invariant=False, soft=False)
+    SF = LinearWeightedFrame(F, d, n, 130, an_invariant=True)
 
     print(SF(X))
