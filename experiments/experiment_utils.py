@@ -16,13 +16,10 @@ class MeanAbsoluteRelativeError(torch.nn.Module):
 
     def __init__(self):
         super(MeanAbsoluteRelativeError, self).__init__()
+        self.eps = 1e-10
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        return torch.where(
-            torch.isclose(target, torch.zeros_like(target)),
-            prediction,
-            (target - prediction) / target.norm(dim=-1, keepdim=True)
-        ).abs().nanmean()
+        return (target - prediction).abs() / (target.norm(dim=-1, keepdim=True) + self.eps)
 
 
 class MeanAbsoluteRelativeDistance(torch.nn.Module):
