@@ -19,7 +19,7 @@ class MeanAbsoluteRelativeError(torch.nn.Module):
         self.eps = 1e-10
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        return (target - prediction).abs() / (target.norm(dim=-1, keepdim=True) + self.eps)
+        return ((target - prediction).abs() / (target.norm(dim=-1, keepdim=True) + self.eps)).mean()
 
 
 class MeanAbsoluteRelativeDistance(torch.nn.Module):
