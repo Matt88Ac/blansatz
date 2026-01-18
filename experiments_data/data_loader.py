@@ -49,47 +49,6 @@ class CutOffTransform(torch.nn.Module):
         return feature_matrix, target
 
 
-class UniformTransform(torch.nn.Module):
-    def __init__(self, n_elements: int, dim: int, cutoff_value: float = 100.0,
-                 device=torch.device('cuda'), dtype=torch.float64):
-        super(UniformTransform, self).__init__()
-
-        assert cutoff_value > 0
-
-        self.n_elements = n_elements
-        self.dim = dim
-        self.cutoff_value = cutoff_value
-
-        self.normal = torch.distributions.Normal(loc=torch.tensor([0.0], device=device, dtype=dtype),
-                                                 scale=torch.tensor([1.0], device=device, dtype=dtype))
-
-        self.running_mean = None
-        self.running_std = None
-        self.momentum = 0.1
-        self.eps = 1e-8
-
-    def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        if self.running_mean is None:
-            self.running_mean = target.mean(dim=-1, keepdim=True)
-            self.running_std = target.std(dim=0, keepdim=True)
-        else:
-            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * target.mean(dim=-1, keepdim=True)
-            self.running_std = (1 - self.momentum) * self.running_std + self.momentum * target.std(dim=-1, keepdim=True)
-
-        print(self.running_std, self.running_mean)
-
-        norm_fx = self.normal.cdf((target - self.running_mean) / (self.running_std + self.eps))
-        norm_fx = 2 * self.cutoff_value * norm_fx - self.cutoff_value
-
-        norm_fx = torch.where(target != 0, norm_fx, target)
-        norm_fx = torch.where(target.sign() != norm_fx.sign(), -norm_fx, norm_fx)
-
-        scale = torch.where(target != 0, norm_fx / target, torch.ones_like(target))
-        feature_matrix = feature_matrix * np.pow(scale[..., None], 1 / self.n_elements)
-
-        return feature_matrix, target
-
-
 class ExperimentDataset(Dataset):
     """
     Dataset class for loading experiment data.
