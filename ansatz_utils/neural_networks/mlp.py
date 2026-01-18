@@ -27,8 +27,6 @@ class AffineBlock(nn.Module):
                 nn.Linear(in_dim, out_dim, bias),
                 get_activation(activation, activation_constant),
             ]
-        with torch.no_grad():
-            nn.init.xavier_uniform_(layer[0].weight, gain=nn.init.calculate_gain('relu'))
 
         self.layer = nn.Sequential(*layer).to(device=device, dtype=dtype)
         self.dropout = None
@@ -87,18 +85,6 @@ class MLP(nn.Module):
 
     Examples:
         >>> mlp = MLP(5, 7, [3, 10, 2], True)
-        >>> mlp
-        MLP(
-          (layers): Sequential(
-            (0): Linear(in_features=5, out_features=3, bias=True)
-            (1): LeakyReLU(negative_slope=0.01)
-            (2): Linear(in_features=3, out_features=10, bias=True)
-            (3): LeakyReLU(negative_slope=0.01)
-            (4): Linear(in_features=10, out_features=2, bias=True)
-            (5): LeakyReLU(negative_slope=0.01)
-            (6): Linear(in_features=2, out_features=7, bias=True)
-          )
-        )
     """
 
     def __init__(self, in_dim: int, out_dim: int, hidden_layers: Optional[list[int]] = None,
