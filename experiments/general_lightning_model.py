@@ -8,6 +8,49 @@ from ansatzes import AfaNetModel, BiLipschitzAntiSymmetricModel, OnVandermondeMo
 from experiments import (get_loss, get_optimizer, get_lr_scheduler)
 
 
+class UniformTransform(torch.nn.Module):
+    def __init__(self, n_elements: int, dim: int, cutoff_value: float = 100.0,
+                 device=torch.device('cuda'), dtype=torch.float64):
+        super(UniformTransform, self).__init__()
+
+        assert cutoff_value > 0
+
+        self.n_elements = n_elements
+        self.dim = dim
+        self.cutoff_value = cutoff_value
+
+        self.normal = torch.distributions.Normal(loc=torch.tensor([0.0], device=device, dtype=dtype),
+                                                 scale=torch.tensor([1.0], device=device, dtype=dtype))
+
+        self.running_mean = None
+        self.running_var = None
+        self.momentum = 0.1
+        self.eps = 1e-8
+
+    def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        if self.running_mean is None:
+            self.running_mean = target.mean(dim=0, keepdim=True)
+            self.running_var = target.var(dim=0, keepdim=True)
+        else:
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * target.mean(dim=0,
+                                                                                                      keepdim=True)
+            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * target.var(dim=0, keepdim=True)
+
+        print("\n VAR = {:.2f}, MEAN = {:.2f} \n".format(self.running_var.cpu().detach().item(), self.running_mean.cpu().detach().item()))
+
+        norm_fx = self.normal.cdf((target - self.running_mean) / torch.sqrt(self.running_var + self.eps))
+        norm_fx = 2 * self.cutoff_value * norm_fx - self.cutoff_value
+
+        norm_fx = torch.where(torch.isclose(target, torch.zeros_like(target)), target, norm_fx)
+        norm_fx = torch.where(target.sign() != norm_fx.sign(), -norm_fx, norm_fx)
+
+        scale = torch.where(torch.isclose(target, torch.zeros_like(target)), torch.ones_like(target), norm_fx / target)
+
+        feature_matrix = feature_matrix * torch.pow(scale.unsqueeze(-1), 1 / self.n_elements)
+
+        return feature_matrix, norm_fx
+
+
 class GeneralTrainer(LightningModule):
     """
     A general PyTorch Lightning trainer for different models. It supports customizable optimizers, learning rate schedulers,
@@ -23,7 +66,15 @@ class GeneralTrainer(LightningModule):
         lr_scheduler_kwargs (dict, optional): Dictionary of learning rate scheduler parameters.
         loss (str, optional): Loss function to use. Defaults to 'mse'.
         extra_metrics (Iterable[str], optional): Additional metrics to compute during training and evaluation. Defaults to None.
-        ansatz_kwargs: Additional keyword arguments for the model ansatz.
+        gradient_clip (bool, optional): Whether to apply gradient clipping. Defaults to False.
+        gradient_clip_val (float, optional): Maximum norm for gradient clipping. Defaults to 0.0.
+        gradient_clip_algorithm (str, optional): Algorithm for gradient clipping ('norm' or 'value'). Defaults to 'norm'.
+        accumulate_grad_batches (int, optional): Number of batches to accumulate gradients over. Defaults to 1.
+        transform (bool, optional): Whether to apply target-uniforming transform to the input. Defaults to False.
+        cutoff_value (float, optional): The cutoff value for scaling outputs. Defaults to 100.0.
+        device (str, optional): Device to run the model on. Defaults to 'cuda'.
+        dtype (torch.dtype, optional): Data type for model parameters. Defaults to torch.float64.
+        **ansatz_kwargs: Additional keyword arguments for the model ansatz.
 
     Attributes:
         model (torch.nn.Module): The antisymmetric neural network model to be trained.
@@ -44,6 +95,9 @@ class GeneralTrainer(LightningModule):
                  gradient_clip_val: Optional[float] = 0.0,
                  gradient_clip_algorithm: Optional[str] = 'norm',
                  accumulate_grad_batches: Optional[int] = 1,
+                 transform: Optional[bool] = False,
+                 cutoff_value: Optional[float] = 100.0,
+                 device: str = 'cuda', dtype=torch.float64,
                  **ansatz_kwargs):
         super(GeneralTrainer, self).__init__()
 
@@ -81,6 +135,9 @@ class GeneralTrainer(LightningModule):
         self.gradient_clip = gradient_clip
         self.gradient_clip_val = gradient_clip_val
         self.gradient_clip_algorithm = gradient_clip_algorithm
+        self.transformation = None
+        if transform:
+            self.transformation = UniformTransform(in_channels, in_dim, cutoff_value, device=device, dtype=dtype)
 
     def configure_optimizers(self):
         optimizer = self.optim(self.model.parameters())
@@ -108,9 +165,15 @@ class GeneralTrainer(LightningModule):
         for metric in self.extra_metrics_names:
             self.log(f'{prefix}_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
 
+    @torch.no_grad()
+    def transform_target(self, X: torch.Tensor, y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        if self.transformation is not None:
+            X, y = self.transformation(X, y)
+        return X, y
+
     def training_step(self, batch, batch_idx):
         X, y = batch
-
+        X, y = self.transform_target(X, y)
         # _t = time()
         y_hat = self.forward(X)
         loss: torch.Tensor = self.loss(y_hat, y)
