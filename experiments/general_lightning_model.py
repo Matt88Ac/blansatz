@@ -128,7 +128,7 @@ class GeneralTrainer(LightningModule):
         self.model = None
         self.example_input_array_dims = (1, in_dim, in_channels)
 
-        self.automatic_optimization = optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo'}
+        self.automatic_optimization = optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo', 'qhadam', 'yogi'}
         self.accumulate_grad_batches = accumulate_grad_batches
         self.gradient_clip = gradient_clip
         self.gradient_clip_val = gradient_clip_val
