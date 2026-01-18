@@ -34,6 +34,9 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                    cutoff: Optional[bool] = False,
                    cutoff_value: Optional[float] = 100.0,
                    transform: Optional[bool] = False,
+                   corr_factor: Optional[bool] = False,
+                   corr_match: Optional[bool] = False,
+                   corr_optimizer_kwargs: Optional[dict] = None,
                    n_workers: int = 0, pin_memory: bool = False,
                    persistent_workers: bool = False,
                    device: str = 'cuda', dtype=torch.float64,
@@ -66,6 +69,9 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         cutoff (bool, optional): Whether to apply cutoff scaling to outputs. Default is False.
         cutoff_value (float, optional): The cutoff value for scaling outputs. Default is 100.0.
         transform (bool, optional): Whether to apply input/output transformation. Default is False.
+        corr_factor (bool, optional): Whether to use correlation factor in the loss computation. Default is False.
+        corr_match (bool, optional): Whether to use correlation matching. Default is False.
+        corr_optimizer_kwargs (dict, optional): Dictionary of optimizer parameters for correlation matching. Default is None.
         n_workers (int): Number of worker processes for data loading. Default is 0.
         pin_memory (bool): Whether to pin memory during data loading. Default is False.
         persistent_workers (bool): Whether to use persistent workers for data loading. Default is False.
@@ -93,11 +99,12 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                                                    gradient_clip_algorithm=gradient_clip_algorithm,
                                                    transform=transform,
                                                    cutoff_value=cutoff_value,
+                                                   corr_factor=corr_factor,
+                                                   corr_match=corr_match,
+                                                   corr_optimizer_kwargs=corr_optimizer_kwargs,
                                                    device=device, dtype=dtype,
                                                    **ansatz_kwargs).to(device=device, dtype=dtype)
-
     ansatz.configure_input_array()
-
 
     if device == 'cuda':
         ansatz.compile(fullgraph=True, dynamic=True,
