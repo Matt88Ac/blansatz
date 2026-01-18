@@ -31,8 +31,6 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
         n_test (int, optional): Number of test samples to generate. Defaults to 20,000.
         lower (float, optional): Lower bound for input values. Defaults to -1.5.
         upper (float, optional): Upper bound for input values. Defaults to 1.5.
-        cutoff (bool, optional): Whether to apply cutoff scaling to outputs. Defaults to False.
-        cutoff_value (float, optional): The cutoff value for scaling outputs. Defaults to 100
         batch_size (int, optional): The size of each batch during generation. Defaults to 1024.
     """
     if n_test is None:
@@ -75,26 +73,9 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
             matrix = np.random.uniform(lower, upper, size=(size, dim, n_elements))
             fx: np.ndarray = exp_func(matrix)
 
-            avg_val = np.abs(fx).mean()
-            max_val = np.maximum(max_val, np.max(fx))
-            min_val = min(min_val, np.min(fx))
-
-            norm_fx = (fx - fx.mean(axis=0, keepdims=True)) / fx.std(axis=0, keepdims=True)
-            norm_fx = norm.cdf(norm_fx)
-            norm_fx = (max_val - min_val) * norm_fx + min_val
-
-            norm_fx = np.where(fx != 0, norm_fx, fx)
-            norm_fx = np.where(np.sign(fx) != np.sign(norm_fx), -norm_fx, norm_fx)
-
-            scale = np.where(fx != 0, norm_fx / fx, 1)
-            matrix = matrix * np.pow(scale[..., None], 1 / n_elements)
-
-            assert np.allclose(norm_fx, exp_func(matrix)), norm_fx
-            assert np.all(np.isnan(norm_fx) == False) and np.all(np.isnan(matrix) == False)
-
             for i in range(size):
                 np.save(PATH + f'{n_elements}_{dim}{os.sep}{name}{os.sep}matrix_{index}', matrix[i:i + 1])
-                np.save(PATH + f'{n_elements}_{dim}{os.sep}{name}{os.sep}res_{index}', norm_fx[i:i + 1])
+                np.save(PATH + f'{n_elements}_{dim}{os.sep}{name}{os.sep}res_{index}', fx[i:i + 1])
                 index += 1
 
             batch += 1
