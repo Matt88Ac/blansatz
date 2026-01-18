@@ -98,6 +98,7 @@ class ExperimentDataset(Dataset):
     def __init__(self, experiment: str, n_elements: int, dim: int,
                  dataset: Literal['train', 'validation', 'test'] = 'train',
                  augment: int = 0,
+                 cutoff: bool = False, cutoff_value: float = 100,
                  device=torch.device('cuda'), dtype=torch.float64):
 
         assert experiment in EXPERIMENTS
@@ -115,7 +116,10 @@ class ExperimentDataset(Dataset):
         self.n_elements = n_elements
         self.augment = augment
 
-        # self.transform = CutOffTransform(n_elements, dim, device=device, dtype=dtype)
+        self.transform = None
+
+        if cutoff:
+            self.transform = CutOffTransform(n_elements, dim, device=device, dtype=dtype, cutoff_value=cutoff_value)
 
     def pin_memory(self):
         self.pin = True
@@ -129,7 +133,8 @@ class ExperimentDataset(Dataset):
         if target.dim() == 1:
             target = target.unsqueeze(0)
 
-        # assert torch.allclose(matrix.det(), target)
+        if self.transform is not None:
+            matrix, target = self.transform(matrix, target)
 
         if self.augment > 0:
             positives = (torch.randn(self.augment) >= 0).int().sum()
@@ -149,8 +154,6 @@ class ExperimentDataset(Dataset):
             matrix = matrix.pin_memory(self.device)
             target = target.pin_memory(self.device)
 
-        # matrix, target = self.transform(matrix, target)
-
         return matrix, target
 
 
@@ -162,7 +165,7 @@ class ExperimentLightningDataModule(LightningDataModule):
     def __init__(self, experiment: str, n_elements: int, dim: int, batch_size: int = 64,
                  shuffle: bool = True, n_workers: int = 0, pin_memory: bool = False,
                  persistent_workers: bool = False,
-                 augment: int = 0,
+                 augment: int = 0, cutoff: bool = False, cutoff_value: float = 100.0,
                  device: str = 'cuda', dtype=torch.float64):
         super().__init__()
         assert batch_size % (augment + 1) == 0
@@ -177,17 +180,19 @@ class ExperimentLightningDataModule(LightningDataModule):
         self.persistent_workers = persistent_workers
         self.dtype = dtype
         self.augment = augment
+        self.cutoff = cutoff
+        self.cutoff_value = cutoff_value
 
     def setup(self, stage):
         # assign to use in dataloaders
         self.train_dataset = ExperimentDataset(self.experiment, self.n_elements, self.dim, 'train',
-                                               self.augment,
+                                               self.augment, self.cutoff, self.cutoff_value,
                                                device=self.device, dtype=self.dtype)
         self.val_dataset = ExperimentDataset(self.experiment, self.n_elements, self.dim, 'validation',
-                                             0,
+                                             0, False, 0,
                                              device=self.device, dtype=self.dtype)
         self.test_dataset = ExperimentDataset(self.experiment, self.n_elements, self.dim, 'test',
-                                              0,
+                                              0, False, 0,
                                               device=self.device, dtype=self.dtype)
 
     def train_dataloader(self):
