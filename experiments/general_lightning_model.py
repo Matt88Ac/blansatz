@@ -36,8 +36,6 @@ class UniformTransform(torch.nn.Module):
                                                                                                       keepdim=True)
             self.running_var = (1 - self.momentum) * self.running_var + self.momentum * target.var(dim=0, keepdim=True)
 
-        print("\n VAR = {:.2f}, MEAN = {:.2f} \n".format(self.running_var.cpu().detach().item(), self.running_mean.cpu().detach().item()))
-
         norm_fx = self.normal.cdf((target - self.running_mean) / torch.sqrt(self.running_var + self.eps))
         norm_fx = 2 * self.cutoff_value * norm_fx - self.cutoff_value
 
