@@ -5,7 +5,7 @@ from pytorch_lightning import LightningModule
 
 from ansatz_utils import get_model
 from ansatzes import AfaNetModel, BiLipschitzAntiSymmetricModel, OnVandermondeModel
-from experiments import (get_loss, get_optimizer, get_lr_scheduler)
+from experiments import (get_loss, get_optimizer, get_lr_scheduler, correlation_factor)
 
 
 class UniformTransform(torch.nn.Module):
@@ -70,6 +70,9 @@ class GeneralTrainer(LightningModule):
         accumulate_grad_batches (int, optional): Number of batches to accumulate gradients over. Defaults to 1.
         transform (bool, optional): Whether to apply target-uniforming transform to the input. Defaults to False.
         cutoff_value (float, optional): The cutoff value for scaling outputs. Defaults to 100.0.
+        corr_factor (bool, optional): Whether to use correlation factor in the loss computation. Defaults to False.
+        corr_match (bool, optional): Whether to use correlation matching in the optimization. Defaults to False.
+        corr_optimizer_kwargs (dict, optional): Dictionary of optimizer parameters for correlation matching. Defaults to None.
         device (str, optional): Device to run the model on. Defaults to 'cuda'.
         dtype (torch.dtype, optional): Data type for model parameters. Defaults to torch.float64.
         **ansatz_kwargs: Additional keyword arguments for the model ansatz.
@@ -82,6 +85,9 @@ class GeneralTrainer(LightningModule):
         extra_metrics_names (Iterable[str]): Names of additional metrics to compute during training and evaluation.
         optim (callable): Optimizer function.
         lr_sched (callable): Learning rate scheduler function.
+        example_input_array_dims (tuple): Dimensions of the example input array for model tracing.
+        automatic_optimization (bool): Whether to use automatic optimization.
+        corr_match (bool): Whether to use correlation matching in the optimization.
     """
 
     def __init__(self, in_dim: int, in_channels: int, out_dim: int, embedding_dim: Optional[int] = None,
@@ -95,9 +101,14 @@ class GeneralTrainer(LightningModule):
                  accumulate_grad_batches: Optional[int] = 1,
                  transform: Optional[bool] = False,
                  cutoff_value: Optional[float] = 100.0,
+                 corr_factor: Optional[bool] = False,
+                 corr_match: Optional[bool] = False,
+                 corr_optimizer_kwargs: Optional[dict] = None,
                  device: str = 'cuda', dtype=torch.float64,
                  **ansatz_kwargs):
         super(GeneralTrainer, self).__init__()
+
+        assert not (corr_factor and corr_match), "Cannot use both correlation factor and correlation matching."
 
         self.save_hyperparameters()
 
@@ -128,21 +139,39 @@ class GeneralTrainer(LightningModule):
         self.model = None
         self.example_input_array_dims = (1, in_dim, in_channels)
 
-        self.automatic_optimization = optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo', 'qhadam', 'yogi'}
+        self.automatic_optimization = (optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo', 'qhadam',
+                                                                             'yogi'}) and (not corr_match)
         self.accumulate_grad_batches = accumulate_grad_batches
         self.gradient_clip = gradient_clip
         self.gradient_clip_val = gradient_clip_val
         self.gradient_clip_algorithm = gradient_clip_algorithm
+        self.corr_factor = corr_factor
+        self.corr_match = corr_match
+
+        if corr_match and corr_optimizer_kwargs is not None:
+            self.corr_optim = get_optimizer(**corr_optimizer_kwargs)
+        elif corr_match and corr_optimizer_kwargs is None:
+            self.corr_optim = get_optimizer(**optimizer_kwargs)
+
         self.transformation = None
         if transform:
             self.transformation = UniformTransform(in_channels, in_dim, cutoff_value, device=device, dtype=dtype)
 
     def configure_optimizers(self):
-        optimizer = self.optim(self.model.parameters())
-        if self.lr_sched is None:
-            return optimizer
+        if not self.corr_match:
+            optimizer = self.optim(self.model.parameters())
+            if self.lr_sched is None:
+                return optimizer
 
-        return {'optimizer': optimizer, 'lr_scheduler': {"scheduler": self.lr_sched(optimizer), "monitor": 'val_loss'}}
+            return {'optimizer': optimizer,
+                    'lr_scheduler': {"scheduler": self.lr_sched(optimizer), "monitor": 'val_loss'}}
+        else:
+            optimizer = self.optim(self.model.parameters())
+            corr_optimizer = self.corr_optim(self.model.parameters())
+            if self.lr_sched is None:
+                return [optimizer, corr_optimizer]
+
+            return [optimizer, corr_optimizer], [self.lr_sched(optimizer), self.lr_sched(corr_optimizer)]
 
     def configure_input_array(self) -> None:
         self.example_input_array = torch.rand(*self.example_input_array_dims, dtype=self.dtype, device=self.device)
@@ -174,21 +203,47 @@ class GeneralTrainer(LightningModule):
         X, y = self.transform_target(X, y)
         # _t = time()
         y_hat = self.forward(X)
-        loss: torch.Tensor = self.loss(y_hat, y)
+        if self.corr_factor:
+            loss: torch.Tensor = self.loss(y_hat, y) / correlation_factor(y_hat, y)
+        else:
+            loss: torch.Tensor = self.loss(y_hat, y)
 
         if not self.automatic_optimization:
             loss.backward(create_graph=True, retain_graph=True)
 
             if self.trainer.is_last_batch or ((batch_idx + 1) % self.accumulate_grad_batches == 0):
-                opt = self.optimizers()
-                if self.gradient_clip_val > 0 and self.gradient_clip:
-                    if self.gradient_clip_algorithm == 'norm':
-                        torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
-                    else:
-                        torch.nn.utils.clip_grad_value_(self.parameters(), self.gradient_clip_val)
+                if not self.corr_match:
+                    opt = self.optimizers()
+                    if self.gradient_clip_val > 0 and self.gradient_clip:
+                        if self.gradient_clip_algorithm == 'norm':
+                            torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
+                        else:
+                            torch.nn.utils.clip_grad_value_(self.parameters(), self.gradient_clip_val)
+                    opt.step()
+                    opt.zero_grad(set_to_none=True)
+                else:
+                    opt, corr_opt = self.optimizers()
+                    if self.gradient_clip_val > 0 and self.gradient_clip:
+                        if self.gradient_clip_algorithm == 'norm':
+                            torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
+                        else:
+                            torch.nn.utils.clip_grad_value_(self.parameters(), self.gradient_clip_val)
 
-                opt.step()
-                opt.zero_grad(set_to_none=True)
+                    opt.step()
+                    opt.zero_grad(set_to_none=False)
+
+                    corr_loss = 1 - correlation_factor(y_hat, y) + 1e-12
+                    corr_loss.backward(create_graph=True, retain_graph=True)
+                    if self.gradient_clip_val > 0 and self.gradient_clip:
+                        if self.gradient_clip_algorithm == 'norm':
+                            torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
+                        else:
+                            torch.nn.utils.clip_grad_value_(self.parameters(), self.gradient_clip_val)
+
+                    corr_opt.step()
+                    corr_opt.zero_grad(set_to_none=True)
+
+                    self.log('train_corr_loss', corr_loss, prog_bar=True)
 
         self.log('train_loss', loss, prog_bar=True)
         # self.log('train_time', time() - _t)
@@ -212,11 +267,20 @@ class GeneralTrainer(LightningModule):
 
     def on_validation_end(self) -> None:
         if (self.lr_sched is not None) and (not self.automatic_optimization):
-            lr_scheduler = self.lr_schedulers()
-            if isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                lr_scheduler.step(self.trainer.callback_metrics["val_loss"])
+            if not self.corr_match:
+                lr_scheduler = self.lr_schedulers()
+                if isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    lr_scheduler.step(self.trainer.callback_metrics["val_loss"])
+                else:
+                    lr_scheduler.step()
             else:
-                lr_scheduler.step()
+                lr_scheduler, corr_lr_scheduler = self.lr_schedulers()
+                if isinstance(lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    lr_scheduler.step(self.trainer.callback_metrics["val_loss"])
+                    corr_lr_scheduler.step(self.trainer.callback_metrics["val_loss"])
+                else:
+                    lr_scheduler.step()
+                    corr_lr_scheduler.step()
 
     def test_step(self, batch, batch_idx):
         with torch.no_grad():
