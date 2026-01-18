@@ -204,7 +204,7 @@ class GeneralTrainer(LightningModule):
         # _t = time()
         y_hat = self.forward(X)
         if self.corr_factor:
-            loss: torch.Tensor = self.loss(y_hat, y) / correlation_factor(y_hat, y)
+            loss: torch.Tensor = self.loss(y_hat, y) / (1 + correlation_factor(y_hat, y) + 1e-10)
         else:
             loss: torch.Tensor = self.loss(y_hat, y)
 
@@ -232,7 +232,7 @@ class GeneralTrainer(LightningModule):
                     opt.step()
                     opt.zero_grad(set_to_none=False)
 
-                    corr_loss = 1 - correlation_factor(y_hat, y) + 1e-12
+                    corr_loss = 1 - correlation_factor(y_hat, y)
                     corr_loss.backward(create_graph=True, retain_graph=True)
                     if self.gradient_clip_val > 0 and self.gradient_clip:
                         if self.gradient_clip_algorithm == 'norm':
