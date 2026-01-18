@@ -18,7 +18,6 @@ EXPERIMENTS = {
 def generate_datasets(experiment: str, n_elements: int, dim: int,
                       n_train: int = 100_000, n_val: int = 10_000, n_test: int = 20_000,
                       lower: float = -1.5, upper: float = 1.5,
-                      cutoff: bool = False, cutoff_value: float = 100,
                       batch_size: int = 1024
                       ):
     """
@@ -75,16 +74,6 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
 
             matrix = np.random.uniform(lower, upper, size=(size, dim, n_elements))
             fx: np.ndarray = exp_func(matrix)
-            if cutoff:
-                cond = np.any(np.abs(fx) > cutoff_value, axis=-1, keepdims=True)
-
-                scale = np.abs(np.random.normal(loc=cutoff_value / 2, scale=cutoff_value / 2))
-                scale = scale / np.max(np.abs(fx), axis=-1, keepdims=True)
-
-                fx = np.where(cond, fx * scale, fx)
-                matrix = np.where(cond[..., None], matrix * np.pow(scale[..., None], 1 / n_elements), matrix)
-
-                assert np.allclose(fx, exp_func(matrix))
 
             avg_val = np.abs(fx).mean()
             max_val = np.maximum(max_val, np.max(fx))
