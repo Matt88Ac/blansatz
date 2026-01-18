@@ -5,6 +5,7 @@ from .dropout import DropoutEquivariant
 from .mlp import MLP
 from .deepsets import DeepSets
 from .attention import Transformer
+from .pivot_mlp import PivotMLP
 
 
 def get_model(model_name: str, *args, **kwargs) -> nn.Module:
@@ -16,9 +17,13 @@ def get_model(model_name: str, *args, **kwargs) -> nn.Module:
 
     elif model_name.lower() in ['attention', 'transformer']:
         return Transformer(*args, **kwargs)
+
+    elif model_name.lower() in ['pivot', 'pmlp', 'pivot_mlp']:
+        return PivotMLP(*args, **kwargs)
+
     
     else:
-        raise ValueError(f"Model '{model_name}' not recognized. Available models are: 'mlp', 'deepsets', 'attention'.")
+        raise ValueError(f"Model '{model_name}' not recognized. Available models are: 'mlp', 'deepsets', 'attention', 'pivot'.")
 
 
 
