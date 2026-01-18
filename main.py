@@ -36,6 +36,8 @@ def parse_to_experiment(parsed_args):
                                    parsed_args.augment,
                                    parsed_args.cutoff, parsed_args.cutoff_value,
                                    parsed_args.transform,
+                                   parsed_args.corr_factor, parsed_args.corr_match,
+                                   parsed_args.corr_optimizer_kwargs,
                                    parsed_args.n_workers, parsed_args.pin_memory, parsed_args.persistent_workers,
                                    parsed_args.device,
                                    torch.float32 if parsed_args.dtype == 'float32' else torch.float64,
@@ -122,6 +124,17 @@ def parser_def():
                         type=lambda _t: json.loads(_t.replace("'", '"')),
                         required=False, default='{}',
                         help='Additional keyword arguments to pass to the ansatz constructor.')
+
+    parser.add_argument('--corr_factor', action=argparse.BooleanOptionalAction,
+                        required=False, default=False,
+                        help='Whether to use correlation factor in the loss computation.')
+    
+    parser.add_argument('--corr_match', action=argparse.BooleanOptionalAction,
+                        required=False, default=False, help='Whether to use correlation matching.')
+    
+    parser.add_argument('--corr_optimizer_kwargs', type=lambda _t: json.loads(_t.replace("'", '"')),
+                        required=False, default="{'optimizer': 'adam', 'lr': 1e-3}",
+                        help='Dictionary of optimizer parameters for correlation matching, e.g., {"optimizer": "adam", "lr": 0.001}.')  
 
     parser.add_argument('--run_generate_datasets', action='store_true',
                         help='If set, generate datasets instead of running an experiment.')
