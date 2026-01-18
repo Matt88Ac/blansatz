@@ -10,8 +10,7 @@ import json
 def parse_to_generate(parsed_args):
     generate_datasets(parsed_args.experiment, parsed_args.n_elements, parsed_args.dim,
                       parsed_args.generate_n_train, parsed_args.generate_n_val, parsed_args.generate_n_test,
-                      parsed_args.generate_lower, parsed_args.generate_upper, 
-                      parsed_args.cutoff, parsed_args.cutoff_value, parsed_args.batch_size)
+                      parsed_args.generate_lower, parsed_args.generate_upper, parsed_args.batch_size)
 
 
 def parse_to_experiment(parsed_args):
@@ -35,6 +34,7 @@ def parse_to_experiment(parsed_args):
                                    parsed_args.accumulate_grad,
                                    parsed_args.batch_size, parsed_args.shuffle,
                                    parsed_args.augment,
+                                   parsed_args.cutoff, parsed_args.cutoff_value,
                                    parsed_args.n_workers, parsed_args.pin_memory, parsed_args.persistent_workers,
                                    parsed_args.device,
                                    torch.float32 if parsed_args.dtype == 'float32' else torch.float64,
