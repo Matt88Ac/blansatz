@@ -20,7 +20,7 @@ def correlation_factor(prediction: torch.Tensor, target: torch.Tensor) -> torch.
         ), dim=-1
     )
 
-    return torch.abs(torch.corrcoef(mat.T)[0, 1]) + eps / 100
+    return torch.corrcoef(mat.T)[0, 1]
 
 
 class MeanAbsoluteRelativeError(torch.nn.Module):
