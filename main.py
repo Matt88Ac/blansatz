@@ -35,6 +35,7 @@ def parse_to_experiment(parsed_args):
                                    parsed_args.batch_size, parsed_args.shuffle,
                                    parsed_args.augment,
                                    parsed_args.cutoff, parsed_args.cutoff_value,
+                                   parsed_args.transform,
                                    parsed_args.n_workers, parsed_args.pin_memory, parsed_args.persistent_workers,
                                    parsed_args.device,
                                    torch.float32 if parsed_args.dtype == 'float32' else torch.float64,
@@ -89,6 +90,10 @@ def parser_def():
 
     parser.add_argument('--accumulate_grad', type=int, required=False, default=1,
                         help='Number of batches to accumulate gradients over.')
+    
+    parser.add_argument('--transform', action=argparse.BooleanOptionalAction,
+                        required=False, default=False,
+                        help='Whether to apply input/output transformation.')
 
     parser.add_argument('--max_epochs', type=int, required=False, default=100,
                         help='Maximum number of training epochs.')
