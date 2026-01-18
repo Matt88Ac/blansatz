@@ -11,6 +11,18 @@ AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
 AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl'}
 
 
+def correlation_factor(prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    eps = 1e-10
+    mat = torch.cat(
+        (
+            (target - prediction).abs().mean(dim=-1, keepdim=True),
+            ((target - prediction).abs() / (target.norm(dim=-1, keepdim=True) + eps)).mean(dim=-1, keepdim=True)
+        ), dim=-1
+    )
+
+    return torch.abs(torch.corrcoef(mat.T)[0, 1]) + eps / 100
+
+
 class MeanAbsoluteRelativeError(torch.nn.Module):
     """Mean Absolute Relative Error Loss"""
 
