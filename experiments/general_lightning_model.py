@@ -213,6 +213,8 @@ class GeneralTrainer(LightningModule):
         if not self.automatic_optimization:
             if self.grad_needed:
                 loss.backward(create_graph=True, retain_graph=True)
+            elif not self.grad_needed and self.corr_match:
+                loss.backward(retain_graph=True)
             else:
                 loss.backward()
 
