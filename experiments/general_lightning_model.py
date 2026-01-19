@@ -204,7 +204,8 @@ class GeneralTrainer(LightningModule):
         X, y = batch
         X, y = self.transform_target(X, y)
         # _t = time()
-        y_hat = self.forward(X)
+        y_hat = self.forward(X).squeeze()
+        y = y.squeeze()
         if self.corr_factor:
             loss: torch.Tensor = self.loss(y_hat, y) / (1 + correlation_factor(y_hat, y) + 1e-10)
         else:
@@ -267,7 +268,8 @@ class GeneralTrainer(LightningModule):
         with torch.no_grad():
             X, y = batch
             # _t = time()
-            y_hat = self.forward(X)
+            y_hat = self.forward(X).squeeze()
+            y = y.squeeze()
             self.log(f'val_loss', self.loss(y_hat, y), prog_bar=True)
             # self.log('val_time', time() - _t)
             self.log(f'val_pred_std', y_hat.std())
@@ -295,8 +297,9 @@ class GeneralTrainer(LightningModule):
     def test_step(self, batch, batch_idx):
         with torch.no_grad():
             X, y = batch
+            y = y.squeeze()
             # _t = time()
-            y_hat = self.forward(X)
+            y_hat = self.forward(X).squeeze()
             loss = self.loss(y_hat, y)
             self.log(f'test_loss', loss)
             # self.log('test_time', time() - _t)
