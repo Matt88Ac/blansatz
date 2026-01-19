@@ -139,6 +139,8 @@ class GeneralTrainer(LightningModule):
         self.model = None
         self.example_input_array_dims = (1, in_dim, in_channels)
 
+        self.grad_needed = optimizer_kwargs['optimizer'] in {'adahessian', 'shampoo', 'qhadam', 'yogi'}
+
         self.automatic_optimization = (optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo', 'qhadam',
                                                                              'yogi'}) and (not corr_match)
         self.accumulate_grad_batches = accumulate_grad_batches
@@ -209,7 +211,10 @@ class GeneralTrainer(LightningModule):
             loss: torch.Tensor = self.loss(y_hat, y)
 
         if not self.automatic_optimization:
-            loss.backward(create_graph=True, retain_graph=True)
+            if self.grad_needed:
+                loss.backward(create_graph=True, retain_graph=True)
+            else:
+                loss.backward()
 
             if self.trainer.is_last_batch or ((batch_idx + 1) % self.accumulate_grad_batches == 0):
                 if not self.corr_match:
@@ -233,7 +238,10 @@ class GeneralTrainer(LightningModule):
                     opt.zero_grad(set_to_none=False)
 
                     corr_loss = 1 - correlation_factor(y_hat, y)
-                    corr_loss.backward(create_graph=True, retain_graph=True)
+                    if self.grad_needed:
+                        corr_loss.backward(create_graph=True, retain_graph=True)
+                    else:
+                        corr_loss.backward()
                     if self.gradient_clip_val > 0 and self.gradient_clip:
                         if self.gradient_clip_algorithm == 'norm':
                             torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
