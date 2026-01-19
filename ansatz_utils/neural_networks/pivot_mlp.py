@@ -27,13 +27,18 @@ class PivotBlock(nn.Module):
             self.layer = nn.Sequential(nn.Linear(in_dim, out_dim, bias, device, dtype),
                                        nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine))
 
+            nn.init.xavier_uniform_(self.layer[0].weight)
+
         else:
             self.layer = nn.Linear(in_dim, out_dim, bias, device, dtype)
+            nn.init.xavier_uniform_(self.layer.weight)
 
         self.pivot = nn.Linear(in_dim, 1, False, device, dtype)
+        nn.init.xavier_uniform_(self.pivot.weight)
         self.skip = None
         if in_dim != out_dim:
             self.skip = nn.Linear(in_dim, out_dim, False, device, dtype)
+            nn.init.xavier_uniform_(self.skip.weight)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.skip is None:

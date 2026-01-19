@@ -27,8 +27,8 @@ class AffineBlock(nn.Module):
                 nn.Linear(in_dim, out_dim, bias),
                 get_activation(activation, activation_constant),
             ]
-
         self.layer = nn.Sequential(*layer).to(device=device, dtype=dtype)
+        nn.init.xavier_uniform_(self.layer[0].weight)
         self.dropout = None
 
         if dropout_p > 0:

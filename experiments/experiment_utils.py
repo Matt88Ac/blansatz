@@ -13,13 +13,20 @@ AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 's
 
 def correlation_factor(prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     eps = 1e-10
-    mat = torch.cat(
-        (
-            (target - prediction).abs().mean(dim=-1, keepdim=True),
-            ((target - prediction).abs() / (target.norm(dim=-1, keepdim=True) + eps)).mean(dim=-1, keepdim=True)
-        ), dim=-1
-    )
-
+    if target.dim() == 1:
+        mat = torch.cat(
+            (
+                (target - prediction).abs().unsqueeze(-1),
+                ((target - prediction).abs() / (target.abs() + eps)).unsqueeze(-1)
+            ), dim=-1
+        )
+    else:
+        mat = torch.cat(
+            (
+                (target - prediction).abs().mean(dim=-1, keepdim=True),
+                ((target - prediction).abs() / (target.norm(dim=-1, keepdim=True) + eps)).mean(dim=-1, keepdim=True)
+            ), dim=-1
+        )
     return torch.corrcoef(mat.T)[0, 1]
 
 
