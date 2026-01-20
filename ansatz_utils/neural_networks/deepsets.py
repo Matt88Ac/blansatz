@@ -32,7 +32,7 @@ class MeanResAffineBlock(nn.Module):
         self.layer = nn.Sequential(*layer).to(device=device, dtype=dtype)
         nn.init.xavier_uniform_(self.layer[0].weight)
         self.dropout = None
-        self.mean_residual = mean_residual
+        self.mean_residual = mean_residual and ((in_dim == out_dim) or in_dim == 1)
 
         if dropout_p > 0:
             self.dropout = DropoutEquivariant(out_dim, dropout_p).to(device=device, dtype=dtype)
@@ -44,8 +44,8 @@ class MeanResAffineBlock(nn.Module):
             return self.dropout(self.layer(x))
         else:
             if self.dropout is None:
-                return self.layer(x + x.mean(dim=-2, keepdim=True))
-            return self.dropout(self.layer(x + x.mean(dim=-2, keepdim=True)))
+                return self.layer(x) + x.mean(dim=-2, keepdim=True)
+            return self.dropout(self.layer(x) + x.mean(dim=-2, keepdim=True))
 
     def reset_dropout(self):
         if self.dropout is None:
