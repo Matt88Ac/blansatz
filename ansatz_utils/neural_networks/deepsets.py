@@ -167,7 +167,8 @@ class DeepSets(nn.Module):
             assert len(res) == self.depth
 
         activations = [activation] * self.depth
-        activations[-1] = 'identity'
+        if 'linear+' not in aggregation.lower():
+            activations[-1] = 'identity'
 
         self.dropout_needed = dropout_p > 0
 
