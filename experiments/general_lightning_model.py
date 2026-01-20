@@ -24,7 +24,7 @@ class UniformTransform(torch.nn.Module):
 
         self.running_mean = None
         self.running_var = None
-        self.momentum = 0.1
+        self.momentum = 1.0
         self.eps = 1e-8
 
     def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
