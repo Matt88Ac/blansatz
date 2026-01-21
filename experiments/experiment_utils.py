@@ -1,12 +1,12 @@
 from functools import partial
 
 import torch
-from torch.optim import Adam, AdamW, Adamax, Adagrad, Rprop, RMSprop, SGD, NAdam
+from torch.optim import Adam, AdamW, Adamax, Adagrad, Rprop, RMSprop, SGD, NAdam, Adadelta
 from torch_optimizer import Adahessian, Shampoo, QHAdam, Yogi
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmRestarts, CosineAnnealingLR, ExponentialLR
 
 AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd', 'adahessian',
-                        'shampoo', 'qhadam', 'yogi'}
+                        'shampoo', 'qhadam', 'yogi', 'adadelta'}
 AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
 AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl'}
 
@@ -127,6 +127,8 @@ def get_optimizer(optimizer: str, *args, **kwargs) -> partial:
         return partial(QHAdam, *args, **kwargs)
     elif optimizer.lower() == 'yogi':
         return partial(Yogi, *args, **kwargs)
+    elif optimizer.lower() == 'adadelta':
+        return partial(Adadelta, *args, **kwargs)
     else:
         raise NotImplementedError(f'Optimizer {optimizer} not recognized. Choose one of {AVAILABLE_OPTIMIZERS}.')
 
