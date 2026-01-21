@@ -13,31 +13,40 @@ class AffineBlock(nn.Module):
                  layer_norm: Optional[bool] = False,
                  elementwise_affine: Optional[bool] = True,
                  dropout_p: Optional[float] = 0.0,
+                 res: Optional[bool] = False,
                  device=torch.device('cpu'), dtype=torch.float64):
         super(AffineBlock, self).__init__()
 
+        self.layer = nn.Linear(in_dim, out_dim, bias, device=device, dtype=dtype)
+        self.norm = None
+        self.activation = get_activation(activation, activation_constant)
+
         if layer_norm:
-            layer = [
-                nn.Linear(in_dim, out_dim, bias),
-                nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine),
-                get_activation(activation, activation_constant),
-            ]
-        else:
-            layer = [
-                nn.Linear(in_dim, out_dim, bias),
-                get_activation(activation, activation_constant),
-            ]
-        self.layer = nn.Sequential(*layer).to(device=device, dtype=dtype)
-        nn.init.xavier_uniform_(self.layer[0].weight)
+            self.norm = nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine,
+                                     device=device, dtype=dtype)
+
+        nn.init.xavier_uniform_(self.layer.weight)
         self.dropout = None
 
         if dropout_p > 0:
             self.dropout = DropoutEquivariant(out_dim, dropout_p).to(device=device, dtype=dtype)
 
+        self.res = res and ((in_dim == out_dim) or in_dim == 1)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.dropout is None:
-            return self.layer(x)
-        return self.dropout(self.layer(x))
+        y = self.layer(x)
+        if self.norm is not None:
+            y = self.norm(y)
+
+        if self.res:
+            y += x
+
+        y = self.activation(y)
+
+        if self.dropout is not None:
+            y = self.dropout(y)
+
+        return y
 
     def reset_dropout(self):
         if self.dropout is None:
@@ -93,6 +102,7 @@ class MLP(nn.Module):
                  layer_norm: Optional[Union[bool, Iterable[bool], str]] = False,
                  elementwise_affine: Optional[bool] = True,
                  dropout_p: Optional[float] = 0.0,
+                 res: Optional[Union[bool, Iterable[bool], str]] = False,
                  device=torch.device('cpu'), dtype=torch.float64, **kwargs):
         super(MLP, self).__init__()
         if hidden_layers is None:
@@ -121,6 +131,15 @@ class MLP(nn.Module):
             layer_norm = list(layer_norm)
             assert len(layer_norm) == self.depth
 
+        if isinstance(res, bool):
+            res = [res] * self.depth
+        elif res == 'all_but_last':
+            res = [True] * self.depth
+            res[-1] = False
+        else:
+            res = list(res)
+            assert len(res) == self.depth
+
         activations = [activation] * self.depth
         activations[-1] = 'identity'
 
@@ -131,7 +150,7 @@ class MLP(nn.Module):
         for i, (in_dim, out_dim) in enumerate(zip(self.layer_dims[:-1], self.layer_dims[1:])):
             self.layers.append(
                 AffineBlock(in_dim, out_dim, biases[i], activations[i], activation_constant,
-                            layer_norm[i], elementwise_affine, dropout_p[i], device, dtype)
+                            layer_norm[i], elementwise_affine, dropout_p[i], res[i], device, dtype)
             )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
