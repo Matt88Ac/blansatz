@@ -74,7 +74,7 @@ class AsWeightedFrame(nn.Module):
         weights = weights.sum(dim=1)
         framed_func = torch.where(
             torch.isclose(weights, torch.zeros_like(weights, requires_grad=False)),
-            framed_func,
+            framed_func * 0,
             framed_func / weights,
         ).nan_to_num(0, 0, 0)
 
