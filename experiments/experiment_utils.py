@@ -72,12 +72,10 @@ class SignedMeanSquaredLogLoss(torch.nn.Module):
 
     def __init__(self):
         super(SignedMeanSquaredLogLoss, self).__init__()
-        self.mu = 0.1
-        self.msl = MeanSquaredLogLoss()
-        self.mse = torch.nn.MSELoss()
+        self.epsilon = 1e-16
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        return self.msl(prediction, target) + self.mse(prediction, target)
+        return ((target - prediction).abs() * ((prediction.abs() + self.epsilon).log() - (target.abs() + self.epsilon).log()).abs()).mean()
 
 
 def get_loss(loss: str) -> torch.nn.Module:
