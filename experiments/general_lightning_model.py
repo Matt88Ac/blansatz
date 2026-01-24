@@ -19,28 +19,13 @@ class UniformTransform(torch.nn.Module):
         self.dim = dim
         self.cutoff_value = cutoff_value
 
-        self.normal = torch.distributions.Normal(loc=torch.tensor([0.0], device=device, dtype=dtype),
-                                                 scale=torch.tensor([1.0], device=device, dtype=dtype))
-
-        self.running_mean = None
-        self.running_var = None
-        self.momentum = 1.0
-        self.eps = 1e-8
+        self.uni = torch.distributions.Uniform(low=torch.tensor([0.0], device=device, dtype=dtype),
+                                               high=torch.tensor([float(cutoff_value)], device=device, dtype=dtype))
 
     def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        if self.running_mean is None:
-            self.running_mean = target.mean(dim=0, keepdim=True)
-            self.running_var = target.var(dim=0, keepdim=True)
-        else:
-            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * target.mean(dim=0,
-                                                                                                      keepdim=True)
-            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * target.var(dim=0, keepdim=True)
-
-        norm_fx = self.normal.cdf((target - self.running_mean) / torch.sqrt(self.running_var + self.eps))
-        norm_fx = 2 * self.cutoff_value * norm_fx - self.cutoff_value
+        norm_fx = self.uni.sample(target.shape) * target.sign()
 
         norm_fx = torch.where(torch.isclose(target, torch.zeros_like(target)), target, norm_fx)
-        norm_fx = torch.where(target.sign() != norm_fx.sign(), -norm_fx, norm_fx)
 
         scale = torch.where(torch.isclose(target, torch.zeros_like(target)), torch.ones_like(target), norm_fx / target)
 
@@ -207,7 +192,7 @@ class GeneralTrainer(LightningModule):
         y_hat = self.forward(X).squeeze()
         y = y.squeeze()
         if self.corr_factor:
-            loss: torch.Tensor = self.loss(y_hat, y) / (1 + correlation_factor(y_hat, y) + 1e-10)
+            loss: torch.Tensor = self.loss(y_hat, y) / (0.5 * (1 + correlation_factor(y_hat, y)) + 1e-10)
         else:
             loss: torch.Tensor = self.loss(y_hat, y)
 
