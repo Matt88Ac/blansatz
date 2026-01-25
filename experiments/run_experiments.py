@@ -170,7 +170,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         trainer.fit(ansatz, data)
 
     else:
-        PATH = PATH + os.sep + "csv_logs" + os.sep + 'lightning_logs' + os.sep + 'version'
+        PATH = PATH + os.sep + "csv_logs" + os.sep + f'{ansatz.model_name}_{data.batch_size}' + os.sep + 'version'
         add_ckpt = lambda path: path + os.sep + 'checkpoints' + os.sep + 'last.ckpt'
         if resume_version == -1:
             versions = glob(PATH + '*')
