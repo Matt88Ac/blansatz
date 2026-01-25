@@ -149,7 +149,6 @@ class GeneralTrainer(LightningModule):
         if self.corr_match:
             self.model_name = self.model_name + f'_corrmatch_{corr_optimizer_kwargs["optimizer"]}'
 
-
         self.transformation = None
         if transform:
             self.transformation = UniformTransform(in_channels, in_dim, cutoff_value, device=device, dtype=dtype)
