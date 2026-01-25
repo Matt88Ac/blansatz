@@ -1,3 +1,4 @@
+from typing import Optional
 import argparse
 
 import torch
@@ -5,6 +6,13 @@ from experiments import run_experiments
 from experiments_data import generate_datasets, run_analysis
 
 import json
+
+
+def parse_dict(d: str) -> Optional[dict]:
+    if d in ['', 'none']:
+        return None
+    else:
+        return json.loads(d.replace("'", '"'))
 
 
 def parse_to_generate(parsed_args):
@@ -62,19 +70,19 @@ def parser_def():
                         help='Name of the model architecture to use. Must be one of ("mlp", "deepsets", "attention").')
 
     parser.add_argument('--optimizer_kwargs',
-                        type=lambda _t: json.loads(_t.replace("'", '"')),
+                        type=parse_dict,
                         required=False, default="{'optimizer': 'adam', 'lr': 1e-3}",
                         help='Dictionary of optimizer parameters, e.g., {"optimizer": "adam", "lr": 0.001}.')
     parser.add_argument('--lr_scheduler_kwargs',
-                        type=lambda _t: json.loads(_t.replace("'", '"')),
+                        type=parse_dict,
                         required=False,
-                        default="{'lr_scheduler': 'reduce', 'factor': 0.3, 'patience': 0, 'min_lr': 1e-6}",
+                        default="none",
                         help='Dictionary of learning rate scheduler parameters, e.g., {"lr_scheduler": "reduce", "factor": 0.3, "min_lr": 1e-6}.')
 
     parser.add_argument('--loss', type=str, required=False, default='mse', help='Loss function to use (mse, l1, etc.).')
     parser.add_argument('--extra_metrics', nargs='+', type=str, required=False, default=['mse', 'l1', 'mare'],
                         help='Additional metrics to compute during training (list of strings).')
-    
+
     parser.add_argument('--early_stopping', action=argparse.BooleanOptionalAction,
                         required=False, default=False,
                         help='Whether to use early stopping based on validation loss.')
@@ -82,7 +90,7 @@ def parser_def():
                         help='Number of epochs with no improvement after which training will be stopped.')
     parser.add_argument('--early_stopping_min_delta', type=float, required=False, default=1e-4,
                         help='Minimum change in the monitored quantity to qualify as an improvement.')
-    
+
     parser.add_argument('--gradient_clip', action=argparse.BooleanOptionalAction,
                         required=False, default=False,
                         help='Whether to apply gradient clipping.')
@@ -93,7 +101,7 @@ def parser_def():
 
     parser.add_argument('--accumulate_grad', type=int, required=False, default=1,
                         help='Number of batches to accumulate gradients over.')
-    
+
     parser.add_argument('--transform', action=argparse.BooleanOptionalAction,
                         required=False, default=False,
                         help='Whether to apply input/output transformation.')
@@ -106,7 +114,7 @@ def parser_def():
 
     parser.add_argument('--augment', type=int, required=False, default=0,
                         help='Number of augmentations to apply to the input data.')
-    
+
     parser.add_argument('--n_workers', type=int, required=False, default=16,
                         help='Number of worker processes for data loading.')
     parser.add_argument('--pin_memory', action=argparse.BooleanOptionalAction,
@@ -115,27 +123,27 @@ def parser_def():
     parser.add_argument('--persistent_workers', action=argparse.BooleanOptionalAction,
                         required=False, default=False,
                         help='Whether to use persistent workers for data loading.')
-    
+
     parser.add_argument('--device', type=str, required=False, default='cpu',
                         help='Device to run the experiment on (cuda or cpu).')
     parser.add_argument('--dtype', type=str, required=False, default='float64',
                         help='Data type for tensors (float32 or float64).')
 
     parser.add_argument('--ansatz_kwargs',
-                        type=lambda _t: json.loads(_t.replace("'", '"')),
-                        required=False, default='{}',
+                        type=parse_dict,
+                        required=False, default='none',
                         help='Additional keyword arguments to pass to the ansatz constructor.')
 
     parser.add_argument('--corr_factor', action=argparse.BooleanOptionalAction,
                         required=False, default=False,
                         help='Whether to use correlation factor in the loss computation.')
-    
+
     parser.add_argument('--corr_match', action=argparse.BooleanOptionalAction,
                         required=False, default=False, help='Whether to use correlation matching.')
-    
-    parser.add_argument('--corr_optimizer_kwargs', type=lambda _t: json.loads(_t.replace("'", '"')),
-                        required=False, default="{'optimizer': 'adam', 'lr': 1e-3}",
-                        help='Dictionary of optimizer parameters for correlation matching, e.g., {"optimizer": "adam", "lr": 0.001}.')  
+
+    parser.add_argument('--corr_optimizer_kwargs', type=parse_dict,
+                        required=False, default="none",
+                        help='Dictionary of optimizer parameters for correlation matching, e.g., {"optimizer": "adam", "lr": 0.001}.')
 
     parser.add_argument('--run_generate_datasets', action='store_true',
                         help='If set, generate datasets instead of running an experiment.')
@@ -154,9 +162,8 @@ def parser_def():
                         help='Whether to apply cutoff scaling to outputs during dataset generation.')
     parser.add_argument('--cutoff_value', type=float, required=False, default=100.0,
                         help='The cutoff value for scaling outputs during dataset generation.')
-    parser.add_argument('--resume_version', type=int, required=False, default=-2, 
+    parser.add_argument('--resume_version', type=int, required=False, default=-2,
                         help='Version of the experiment to resume training from. Use -2 to not resume. Use -1 for latest, or specific version number.')
-    
 
     return parser.parse_args()
 
