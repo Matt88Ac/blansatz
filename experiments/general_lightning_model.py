@@ -128,6 +128,7 @@ class GeneralTrainer(LightningModule):
 
         self.automatic_optimization = (optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo', 'qhadam',
                                                                              'yogi'}) and (not corr_match)
+
         self.accumulate_grad_batches = accumulate_grad_batches
         self.gradient_clip = gradient_clip
         self.gradient_clip_val = gradient_clip_val
@@ -135,10 +136,19 @@ class GeneralTrainer(LightningModule):
         self.corr_factor = corr_factor
         self.corr_match = corr_match
 
-        if corr_match and corr_optimizer_kwargs is not None:
+        if corr_match:
+            if corr_optimizer_kwargs is None:
+                corr_optimizer_kwargs = optimizer_kwargs.copy()
             self.corr_optim = get_optimizer(**corr_optimizer_kwargs)
-        elif corr_match and corr_optimizer_kwargs is None:
-            self.corr_optim = get_optimizer(**optimizer_kwargs)
+
+        self.model_name = self.model_name + f'_{self.loss_name}_{optimizer_kwargs["optimizer"]}'
+        if self.lr_sched is not None:
+            self.model_name = self.model_name + f'_{lr_scheduler_kwargs["lr_scheduler"]}'
+        if self.corr_factor:
+            self.model_name = self.model_name + '_corrfactor'
+        if self.corr_match:
+            self.model_name = self.model_name + f'_corrmatch_{corr_optimizer_kwargs["optimizer"]}'
+
 
         self.transformation = None
         if transform:
