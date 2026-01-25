@@ -234,7 +234,7 @@ class GeneralTrainer(LightningModule):
                     opt.step()
                     opt.zero_grad(set_to_none=False)
 
-                    corr_loss = 1 - (correlation_factor(y_hat.clone(), y.clone()) ** 2)
+                    corr_loss = 1 - (correlation_factor(y_hat, y) ** 2)
                     if self.grad_needed:
                         corr_loss.backward(create_graph=True, retain_graph=True)
                     else:
