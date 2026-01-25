@@ -17,16 +17,18 @@ class PivotBlock(nn.Module):
         super(PivotBlock, self).__init__()
 
         self.dropout = None
-        self.norm = None
-
-        self.layer = nn.Linear(in_dim, out_dim, bias, device, dtype)
-        nn.init.xavier_uniform_(self.layer.weight)
 
         if dropout_p > 0:
             self.dropout = DropoutEquivariant(out_dim, dropout_p).to(device=device, dtype=dtype)
 
         if layer_norm:
-            self.norm = nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine)
+            self.layer = nn.Sequential(nn.Linear(in_dim, out_dim, bias, device, dtype),
+                                       nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine))
+            nn.init.xavier_uniform_(self.layer[0].weight)
+
+        else:
+            self.layer = nn.Linear(in_dim, out_dim, bias, device, dtype)
+            nn.init.xavier_uniform_(self.layer.weight)
 
         self.act = get_activation(activation, activation_constant)
         self.piv = (in_dim == out_dim) or (in_dim == 1)
@@ -39,9 +41,6 @@ class PivotBlock(nn.Module):
             out = self.act(self.layer(x) + self.pivot(x) * x)
         else:
             out = self.act(self.layer(x))
-
-        if self.norm is not None:
-            out = self.norm(out)
 
         if self.dropout is not None:
             out = self.dropout(out)
