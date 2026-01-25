@@ -246,7 +246,6 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
                  device: Optional = torch.device('cpu'), dtype: Optional = torch.float64, *args, **kwargs):
         super(LinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
                                                   device, dtype, *args, **kwargs)
-        self.p_norm = 1
 
     def stable_forward(self, sorted_x: Tensor, x: Tensor = None) -> Tensor:
         """
@@ -260,7 +259,7 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
             Tensor: The weakly-stabilized output.
         """
 
-        weight_hat = torch.norm(sorted_x.diff(dim=-1), dim=-2, p=self.p_norm)
+        weight_hat = torch.norm(sorted_x.diff(dim=-1), dim=-2, p='fro')
         sorted_x = sorted_x.unsqueeze(-3)
 
         if not self.an_invariant:
