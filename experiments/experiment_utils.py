@@ -8,11 +8,23 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmResta
 AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd', 'adahessian',
                         'shampoo', 'qhadam', 'yogi', 'adadelta', 'radam'}
 AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
-AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl'}
+AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl', 'gnl'}
 
 
 def correlation_factor(prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return torch.corrcoef(torch.vstack((target.flatten(), prediction.flatten())))[0, 1]
+
+
+class GNL(torch.nn.Module):
+
+    def __init__(self):
+        super(GNL, self).__init__()
+        self.eps = 1e-10
+        self.gnl = torch.nn.GaussianNLLLoss()
+
+    def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return self.gnl(prediction.flatten(), target.flatten(), prediction.var())
+
 
 
 class MeanAbsoluteRelativeError(torch.nn.Module):
@@ -60,7 +72,8 @@ class SignedMeanSquaredLogLoss(torch.nn.Module):
         self.epsilon = 1e-16
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        return ((target - prediction).abs() * ((prediction.abs() + self.epsilon).log() - (target.abs() + self.epsilon).log()).abs()).mean()
+        return ((target - prediction).abs() * (
+                    (prediction.abs() + self.epsilon).log() - (target.abs() + self.epsilon).log()).abs()).mean()
 
 
 def get_loss(loss: str) -> torch.nn.Module:
@@ -83,6 +96,8 @@ def get_loss(loss: str) -> torch.nn.Module:
         return MeanSquaredLogLoss()
     elif loss.lower() == 'smsl':
         return SignedMeanSquaredLogLoss()
+    elif loss.lower() == 'gnl':
+        return GNL()
 
 
 def get_optimizer(optimizer: str, *args, **kwargs) -> partial:
