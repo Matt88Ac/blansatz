@@ -12,21 +12,7 @@ AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 's
 
 
 def correlation_factor(prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    if target.dim() == 1:
-        mat = torch.cat(
-            (
-                target.unsqueeze(-1),
-                prediction.unsqueeze(-1)
-            ), dim=-1
-        )
-    else:
-        mat = torch.cat(
-            (
-                target,
-                prediction
-            ), dim=-1
-        )
-    return torch.corrcoef(mat.T)[0, 1]
+    return torch.corrcoef(torch.vstack((target.flatten(), prediction.flatten())))[0, 1]
 
 
 class MeanAbsoluteRelativeError(torch.nn.Module):
