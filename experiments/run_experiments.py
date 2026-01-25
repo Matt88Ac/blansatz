@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Union
 
 import torch
 from pytorch_lightning import callbacks, Trainer
@@ -8,6 +8,8 @@ from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 from experiments import (LightningOnVandermondeModel, LightningBiLipschitzAntiSymmetricModel,
                          LightningAfaNetModel, LightningNoneAsModel, GeneralTrainer)
 from experiments_data import ExperimentLightningDataModule, EXPERIMENTS
+
+from glob import glob
 
 ANSATZES = {'bl': LightningBiLipschitzAntiSymmetricModel,
             'on': LightningOnVandermondeModel,
@@ -39,6 +41,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                    corr_optimizer_kwargs: Optional[dict] = None,
                    n_workers: int = 0, pin_memory: bool = False,
                    persistent_workers: bool = False,
+                   resume_version: Optional[int] = -2,
                    device: str = 'cuda', dtype=torch.float64,
                    **ansatz_kwargs):
     """
@@ -75,6 +78,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         n_workers (int): Number of worker processes for data loading. Default is 0.
         pin_memory (bool): Whether to pin memory during data loading. Default is False.
         persistent_workers (bool): Whether to use persistent workers for data loading. Default is False.
+        resume_version (int, optional): Version of the experiment to resume from. Use -2 to not resume, -1 for latest, or specific version number. Default is -2.
         device (str): Device to run the experiment on ('cuda' or 'cpu'). Default is 'cuda'.
         dtype: Data type for tensors. Default is torch.float64.
         ansatz_kwargs: Additional keyword arguments to pass to the ansatz constructor.
@@ -146,27 +150,35 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         )
 
     accumulate_grad_batches = accumulate_grad_batches if ansatz.automatic_optimization else 1
+    gradient_clip_val = gradient_clip_val if ansatz.automatic_optimization else 0
+    gradient_clip_algorithm = gradient_clip_algorithm if ansatz.automatic_optimization else None
 
-    if not gradient_clip or not ansatz.automatic_optimization:
-        trainer = Trainer(
-            logger=[csv_logger, tb_logger],
-            accelerator="gpu" if device == 'cuda' else "cpu",
-            max_epochs=max_epochs,
-            callbacks=call_backs,
-            enable_checkpointing=True,
-            log_every_n_steps=1, accumulate_grad_batches=accumulate_grad_batches
-        )
+    trainer = Trainer(
+        logger=[csv_logger, tb_logger],
+        accelerator="gpu" if device == 'cuda' else "cpu",
+        max_epochs=max_epochs,
+        callbacks=call_backs,
+        enable_checkpointing=True,
+        log_every_n_steps=1,
+        gradient_clip_val=gradient_clip_val,
+        gradient_clip_algorithm=gradient_clip_algorithm,
+        accumulate_grad_batches=accumulate_grad_batches
+    )
+
+    assert resume_version >= -2 and isinstance(resume_version, int)
+    if resume_version == -2:
+        trainer.fit(ansatz, data)
+
     else:
-        trainer = Trainer(
-            logger=[csv_logger, tb_logger],
-            accelerator="gpu" if device == 'cuda' else "cpu",
-            max_epochs=max_epochs,
-            callbacks=call_backs,
-            enable_checkpointing=True,
-            log_every_n_steps=1,
-            gradient_clip_val=gradient_clip_val,
-            gradient_clip_algorithm=gradient_clip_algorithm,
-            accumulate_grad_batches=accumulate_grad_batches
-        )
-    trainer.fit(ansatz, data)
+        PATH = PATH + os.sep + "csv_logs" + os.sep + 'lightning_logs' + os.sep + 'version'
+        add_ckpt = lambda path: path + os.sep + 'checkpoints' + os.sep + 'last.ckpt'
+        if resume_version == -1:
+            versions = glob(PATH + '*')
+            max_ver = lambda path: int(path.split('_')[-1])
+            versions = sorted(versions, key=max_ver)
+            trainer.fit(ansatz, data, ckpt_path=add_ckpt(versions[-1]))
+
+        else:
+            trainer.fit(ansatz, data, ckpt_path=add_ckpt(PATH + f'_{resume_version}'))
+
     trainer.test(ansatz, data, 'best')
