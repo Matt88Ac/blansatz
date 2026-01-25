@@ -184,9 +184,9 @@ class Transformer(nn.Module):
 
 if __name__ == '__main__':
     b, d, n = 10, 12, 15
-    model = Transformer(d, 2, 4, hidden_layers=[12, 100, 32], device='cpu', aggregation='linear')
+    model = Transformer(d, 2, n, hidden_layers=[12, 100, 32], device='cpu', aggregation='linear')
 
-    X = torch.rand(b, d, n, dtype=torch.float64, device='cpu') * 10
+    X = torch.rand(b, 6, 7, d, n, dtype=torch.float64, device='cpu') * 10
     # for i in range(100):
     #     X = torch.rand(b, d, n, dtype=torch.float64, device='cpu') * 10
     #     rand_x = X[..., torch.randperm(n)]
