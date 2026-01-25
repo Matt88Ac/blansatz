@@ -39,6 +39,7 @@ def parse_to_experiment(parsed_args):
                                    parsed_args.corr_factor, parsed_args.corr_match,
                                    parsed_args.corr_optimizer_kwargs,
                                    parsed_args.n_workers, parsed_args.pin_memory, parsed_args.persistent_workers,
+                                   parsed_args.resume_version,
                                    parsed_args.device,
                                    torch.float32 if parsed_args.dtype == 'float32' else torch.float64,
                                    **parsed_args.ansatz_kwargs)
@@ -153,6 +154,9 @@ def parser_def():
                         help='Whether to apply cutoff scaling to outputs during dataset generation.')
     parser.add_argument('--cutoff_value', type=float, required=False, default=100.0,
                         help='The cutoff value for scaling outputs during dataset generation.')
+    parser.add_argument('--resume_version', type=int, required=False, default=-2, 
+                        help='Version of the experiment to resume training from. Use -2 to not resume. Use -1 for latest, or specific version number.')
+    
 
     return parser.parse_args()
 
