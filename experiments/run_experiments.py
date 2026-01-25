@@ -130,10 +130,10 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
                                          cutoff_value,
                                          device=device, dtype=dtype)
 
-    PATH = os.path.dirname(__file__) + os.sep + f'{experiment}_logs' + os.sep + f'{ansatz.model_name}_{data.batch_size}'
+    PATH = os.path.dirname(__file__) + os.sep + f'{experiment}_logs'
 
-    tb_logger = TensorBoardLogger(PATH + os.sep + "tb_logs")  # log_graph=True)
-    csv_logger = CSVLogger(PATH + os.sep + "csv_logs")
+    tb_logger = TensorBoardLogger(PATH + os.sep + "tb_logs", name=f'{ansatz.model_name}_{data.batch_size}', )  # log_graph=True)
+    csv_logger = CSVLogger(PATH + os.sep + "csv_logs", name=f'{ansatz.model_name}_{data.batch_size}')
     checkpoint = callbacks.ModelCheckpoint(
         filename="best",
         monitor='val_loss',
