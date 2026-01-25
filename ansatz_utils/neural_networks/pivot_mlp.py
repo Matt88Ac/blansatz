@@ -17,34 +17,31 @@ class PivotBlock(nn.Module):
         super(PivotBlock, self).__init__()
 
         self.dropout = None
+        self.norm = None
+
+        self.layer = nn.Linear(in_dim, out_dim, bias, device, dtype)
+        nn.init.xavier_uniform_(self.layer.weight)
 
         if dropout_p > 0:
             self.dropout = DropoutEquivariant(out_dim, dropout_p).to(device=device, dtype=dtype)
 
-        self.act = get_activation(activation, activation_constant)
-
         if layer_norm:
-            self.layer = nn.Sequential(nn.Linear(in_dim, out_dim, bias, device, dtype),
-                                       nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine))
+            self.norm = nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine)
 
-            nn.init.xavier_uniform_(self.layer[0].weight)
-
-        else:
-            self.layer = nn.Linear(in_dim, out_dim, bias, device, dtype)
-            nn.init.xavier_uniform_(self.layer.weight)
-
-        self.pivot = nn.Linear(in_dim, 1, False, device, dtype)
-        nn.init.xavier_uniform_(self.pivot.weight)
-        self.skip = None
-        if in_dim != out_dim:
-            self.skip = nn.Linear(in_dim, out_dim, False, device, dtype)
-            nn.init.xavier_uniform_(self.skip.weight)
+        self.act = get_activation(activation, activation_constant)
+        self.piv = (in_dim == out_dim) or (in_dim == 1)
+        if self.piv:
+            self.pivot = nn.Linear(in_dim, 1, False, device, dtype)
+            nn.init.xavier_uniform_(self.pivot.weight)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.skip is None:
+        if self.piv:
             out = self.act(self.layer(x) + self.pivot(x) * x)
         else:
-            out = self.act(self.layer(x) + self.pivot(x) * self.skip(x))
+            out = self.act(self.layer(x))
+
+        if self.norm is not None:
+            out = self.norm(out)
 
         if self.dropout is not None:
             out = self.dropout(out)
@@ -155,4 +152,3 @@ class PivotMLP(nn.Module):
     def reset_dropout(self):
         for i in range(self.depth):
             self.layers[i].reset_dropout()
-
