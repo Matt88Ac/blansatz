@@ -162,7 +162,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
         log_every_n_steps=1,
         gradient_clip_val=gradient_clip_val,
         gradient_clip_algorithm=gradient_clip_algorithm,
-        accumulate_grad_batches=accumulate_grad_batches
+        accumulate_grad_batches=accumulate_grad_batches,
     )
 
     assert resume_version >= -2 and isinstance(resume_version, int)
