@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmResta
 AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd', 'adahessian',
                         'shampoo', 'qhadam', 'yogi', 'adadelta', 'radam'}
 AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
-AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl'}
+AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl', 'lc'}
 
 
 def correlation_factor(prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -64,6 +64,24 @@ class SignedMeanSquaredLogLoss(torch.nn.Module):
                 (prediction.abs() + self.epsilon).log() - (target.abs() + self.epsilon).log()).abs()).mean()
 
 
+class LogCoshLoss(torch.nn.Module):
+    def __init__(self):
+        super(LogCoshLoss, self).__init__()
+        self.std = None
+        self.momentum = 0.1
+        self.eps = 1e-10
+
+    def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        if self.std is None:
+            self.std = target.std()
+        else:
+            self.std = ((1 - self.momentum) * self.std) + (self.momentum * target.std())
+
+        return torch.log(torch.cosh(
+            (prediction - target) / (self.std + self.eps)
+        )).mean()
+
+
 def get_loss(loss: str) -> torch.nn.Module:
     assert loss.lower() in AVAILABLE_LOSSES, (
         NotImplementedError("Choose on of mse, l1, huber and smooth_l1 as loss functions"))
@@ -84,6 +102,8 @@ def get_loss(loss: str) -> torch.nn.Module:
         return MeanSquaredLogLoss()
     elif loss.lower() == 'smsl':
         return SignedMeanSquaredLogLoss()
+    elif loss.lower() == 'lc':
+        return LogCoshLoss()
 
 
 def get_optimizer(optimizer: str, *args, **kwargs) -> partial:
