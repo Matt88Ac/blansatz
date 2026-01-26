@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 def load_all_results(PATH: str, experiment: str) -> np.ndarray:
 
-    loader = tqdm(glob(PATH + f'train{os.sep}res*.npy'), desc=f'loading training {experiment} target data')
+    loader = tqdm(glob(PATH + f'train{os.sep}res*.npy'), desc=f'loading training {experiment} target data', colour='blue')
 
     targets = np.vstack([np.load(path) for path in loader])
     return targets
