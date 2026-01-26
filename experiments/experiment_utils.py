@@ -67,18 +67,13 @@ class SignedMeanSquaredLogLoss(torch.nn.Module):
 class LogCoshLoss(torch.nn.Module):
     def __init__(self):
         super(LogCoshLoss, self).__init__()
-        self.std = None
-        self.momentum = 0.1
         self.eps = 1e-10
+        self.mse = torch.nn.MSELoss()
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        if self.std is None:
-            self.std = target.std()
-        else:
-            self.std = ((1 - self.momentum) * self.std) + (self.momentum * target.std())
 
         return torch.log(torch.cosh(
-            (prediction - target) / (self.std + self.eps)
+            (prediction - target) / (torch.sqrt(self.mse(target, target*0)) + self.eps)
         )).mean()
 
 
