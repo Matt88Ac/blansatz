@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmResta
 AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd', 'adahessian',
                         'shampoo', 'qhadam', 'yogi', 'adadelta', 'radam'}
 AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
-AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl', 'lc'}
+AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl', 'lc', 'slc'}
 
 
 def correlation_factor(prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -67,12 +67,17 @@ class SignedMeanSquaredLogLoss(torch.nn.Module):
 class LogCoshLoss(torch.nn.Module):
     def __init__(self):
         super(LogCoshLoss, self).__init__()
-        self.eps = 1e-10
-        self.mse = torch.nn.MSELoss()
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return torch.log(torch.cosh(prediction - target)).mean()
 
-        return ((1 + target.abs()/3)*torch.log(torch.cosh(prediction - target))).mean()
+
+class ScaleLogCoshLoss(torch.nn.Module):
+    def __init__(self):
+        super(ScaleLogCoshLoss, self).__init__()
+
+    def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return ((1 + target.abs() / 3) * torch.log(torch.cosh(prediction - target))).mean()
 
 
 def get_loss(loss: str) -> torch.nn.Module:
@@ -97,6 +102,8 @@ def get_loss(loss: str) -> torch.nn.Module:
         return SignedMeanSquaredLogLoss()
     elif loss.lower() == 'lc':
         return LogCoshLoss()
+    elif loss.lower() == 'slc':
+        return ScaleLogCoshLoss()
 
 
 def get_optimizer(optimizer: str, *args, **kwargs) -> partial:
