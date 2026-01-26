@@ -165,6 +165,9 @@ def parser_def():
     parser.add_argument('--resume_version', type=int, required=False, default=-2,
                         help='Version of the experiment to resume training from. Use -2 to not resume. Use -1 for latest, or specific version number.')
 
+    parser.add_argument('--run_analysis', action='store_true',
+                        help='If set, run analysis on the specified experiment instead of training.')
+
     return parser.parse_args()
 
 
@@ -174,14 +177,15 @@ def main():
         parse_to_generate(parsed_args)
 
     else:
-        parse_to_experiment(parsed_args)
+        if parsed_args.run_analysis:
+            run_analysis(experiment=parsed_args.experiment,
+                         n_elements=parsed_args.n_elements,
+                         dim=parsed_args.dim)
+        else:
+            parse_to_experiment(parsed_args)
 
 
 if __name__ == '__main__':
-    # J = '{"an_invariant": false, "frame_name": "nonlinear", "hidden_layers": [128, 128, 128], "activation": "tanh", "biases": "all_but_last"}'
-    # run_analysis(experiment='determinant', n_elements=12, dim=12)
-    # exit(0)
-
     main()
     exit(0)
     # generate_datasets('determinant', 2, 2, 100_000, 10_000, 10_000)
