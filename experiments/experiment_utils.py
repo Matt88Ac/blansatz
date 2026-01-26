@@ -72,9 +72,7 @@ class LogCoshLoss(torch.nn.Module):
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
 
-        return torch.log(torch.cosh(
-            (prediction - target) #/ (torch.sqrt(self.mse(target, target*0)) + self.eps)
-        )).mean()
+        return ((1 + target.abs()/3)*torch.log(torch.cosh(prediction - target))).mean()
 
 
 def get_loss(loss: str) -> torch.nn.Module:
