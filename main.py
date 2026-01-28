@@ -97,7 +97,7 @@ def parser_def():
     parser.add_argument('--gradient_clip_val', type=float, required=False, default=1.0,
                         help='Maximum norm for gradient clipping.')
     parser.add_argument('--gradient_clip_algorithm', type=str, required=False, default='norm',
-                        help='Algorithm for gradient clipping ("norm" or "value").')
+                        help='Algorithm for gradient clipping ("norm", "value" or "noise").')
 
     parser.add_argument('--accumulate_grad', type=int, required=False, default=1,
                         help='Number of batches to accumulate gradients over.')
