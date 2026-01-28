@@ -5,7 +5,8 @@ from pytorch_lightning import LightningModule
 
 from ansatz_utils import get_model
 from ansatzes import AfaNetModel, BiLipschitzAntiSymmetricModel, OnVandermondeModel
-from experiments import (get_loss, get_optimizer, get_lr_scheduler, correlation_factor)
+from experiments import (get_loss, get_optimizer, get_lr_scheduler, correlation_factor, gradient_algorithm,
+                         AVAILABLE_GRAD)
 
 
 class UniformTransform(torch.nn.Module):
@@ -35,7 +36,7 @@ class UniformTransform(torch.nn.Module):
 
 
 class GeneralTrainer(LightningModule):
-    """
+    f"""
     A general PyTorch Lightning trainer for different models. It supports customizable optimizers, learning rate schedulers,
     loss functions, and additional metrics. The model architecture is defined by the provided ansatz parameters.
 
@@ -51,7 +52,7 @@ class GeneralTrainer(LightningModule):
         extra_metrics (Iterable[str], optional): Additional metrics to compute during training and evaluation. Defaults to None.
         gradient_clip (bool, optional): Whether to apply gradient clipping. Defaults to False.
         gradient_clip_val (float, optional): Maximum norm for gradient clipping. Defaults to 0.0.
-        gradient_clip_algorithm (str, optional): Algorithm for gradient clipping ('norm' or 'value'). Defaults to 'norm'.
+        gradient_clip_algorithm (str, optional): Algorithm for gradient clipping (one of {AVAILABLE_GRAD}). Defaults to 'norm'.
         accumulate_grad_batches (int, optional): Number of batches to accumulate gradients over. Defaults to 1.
         transform (bool, optional): Whether to apply target-uniforming transform to the input. Defaults to False.
         cutoff_value (float, optional): The cutoff value for scaling outputs. Defaults to 100.0.
@@ -126,13 +127,18 @@ class GeneralTrainer(LightningModule):
 
         self.grad_needed = optimizer_kwargs['optimizer'] in {'adahessian', 'shampoo', 'qhadam', 'yogi'}
 
-        self.automatic_optimization = (optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo', 'qhadam',
-                                                                             'yogi'}) and (not corr_match)
+        self.automatic_optimization = ((optimizer_kwargs['optimizer'] not in {'adahessian', 'shampoo', 'qhadam',
+                                                                              'yogi'}) and (not corr_match) and
+                                       (gradient_clip_algorithm != 'noise'))
 
         self.accumulate_grad_batches = accumulate_grad_batches
         self.gradient_clip = gradient_clip
         self.gradient_clip_val = gradient_clip_val
         self.gradient_clip_algorithm = gradient_clip_algorithm
+
+        if gradient_clip:
+            self.gradient_algorithm = gradient_algorithm(gradient_clip_algorithm, gradient_clip_val)
+
         self.corr_factor = corr_factor
         self.corr_match = corr_match
 
@@ -218,19 +224,13 @@ class GeneralTrainer(LightningModule):
                 if not self.corr_match:
                     opt = self.optimizers()
                     if self.gradient_clip_val > 0 and self.gradient_clip:
-                        if self.gradient_clip_algorithm == 'norm':
-                            torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
-                        else:
-                            torch.nn.utils.clip_grad_value_(self.parameters(), self.gradient_clip_val)
+                        self.gradient_algorithm(self.parameters())
                     opt.step()
                     opt.zero_grad(set_to_none=True)
                 else:
                     opt, corr_opt = self.optimizers()
                     if self.gradient_clip_val > 0 and self.gradient_clip:
-                        if self.gradient_clip_algorithm == 'norm':
-                            torch.nn.utils.clip_grad_norm_(self.parameters(), self.gradient_clip_val)
-                        else:
-                            torch.nn.utils.clip_grad_value_(self.parameters(), self.gradient_clip_val)
+                        self.gradient_algorithm(self.parameters())
 
                     opt.step()
                     opt.zero_grad(set_to_none=False)
