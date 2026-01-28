@@ -1,4 +1,5 @@
 from typing import Optional, Union, Iterable
+from math import sqrt
 
 import torch
 from torch import nn
@@ -9,7 +10,7 @@ from .dropout import DropoutEquivariant
 
 class AffineBlock(nn.Module):
     def __init__(self, in_dim: int, out_dim: int, bias: Optional[bool] = True,
-                 activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.01,
+                 activation: Optional[str] = 'leakyrelu', activation_constant: Optional[float] = 0.1,
                  layer_norm: Optional[bool] = False,
                  elementwise_affine: Optional[bool] = True,
                  dropout_p: Optional[float] = 0.0,
@@ -25,7 +26,7 @@ class AffineBlock(nn.Module):
             self.norm = nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine,
                                      device=device, dtype=dtype)
 
-        nn.init.xavier_uniform_(self.layer.weight)
+        nn.init.xavier_uniform_(self.layer.weight, gain=nn.init.calculate_gain('relu')*sqrt(float(out_dim)))
         self.dropout = None
 
         if dropout_p > 0:
