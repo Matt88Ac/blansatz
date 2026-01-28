@@ -134,15 +134,22 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
 
     tb_logger = TensorBoardLogger(PATH + os.sep + "tb_logs", name=f'{ansatz.model_name}_{data.batch_size}', )  # log_graph=True)
     csv_logger = CSVLogger(PATH + os.sep + "csv_logs", name=f'{ansatz.model_name}_{data.batch_size}')
-    checkpoint = callbacks.ModelCheckpoint(
+    checkpoint_1 = callbacks.ModelCheckpoint(
         filename="best",
         monitor='val_loss',
         auto_insert_metric_name=True,
         save_top_k=1,
-        save_last=True,
     )
 
-    call_backs = [checkpoint, callbacks.LearningRateMonitor(), callbacks.TQDMProgressBar(leave=True)]
+    checkpoint_2 = callbacks.ModelCheckpoint(
+        filename="last",
+        auto_insert_metric_name=True,
+        save_top_k=-1,
+        every_n_train_steps=1,
+        save_on_exception=True
+    )
+
+    call_backs = [checkpoint_1, checkpoint_2, callbacks.LearningRateMonitor(), callbacks.TQDMProgressBar(leave=True)]
     if early_stopping:
         call_backs.append(
             callbacks.EarlyStopping('val_loss', early_stopping_min_delta, early_stopping_patience,
