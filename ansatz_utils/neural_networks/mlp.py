@@ -26,7 +26,7 @@ class AffineBlock(nn.Module):
             self.norm = nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine,
                                      device=device, dtype=dtype)
 
-        nn.init.xavier_uniform_(self.layer.weight, gain=nn.init.calculate_gain('relu')*sqrt(float(out_dim)))
+        nn.init.xavier_uniform_(self.layer.weight, gain=nn.init.calculate_gain('leaky_relu', activation_constant))
         self.dropout = None
 
         if dropout_p > 0:
