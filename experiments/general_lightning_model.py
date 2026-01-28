@@ -208,7 +208,7 @@ class GeneralTrainer(LightningModule):
         y = y.squeeze()
         if self.corr_factor:
             corr_loss = 1 - (correlation_factor(y_hat, y) ** 2)
-            loss: torch.Tensor = self.loss(y_hat, y) * corr_loss
+            loss: torch.Tensor = self.loss(y_hat, y) / (1 - corr_loss + 1e-10)
         else:
             loss: torch.Tensor = self.loss(y_hat, y)
 
