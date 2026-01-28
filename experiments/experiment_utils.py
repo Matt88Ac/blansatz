@@ -1,3 +1,4 @@
+from typing import Callable, Generator
 from functools import partial
 
 import torch
@@ -8,7 +9,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingWarmResta
 AVAILABLE_OPTIMIZERS = {'adam', 'adamax', 'adamw', 'adagrad', 'nadam', 'rmsprop', 'rprop', 'sgd', 'adahessian',
                         'shampoo', 'qhadam', 'yogi', 'adadelta', 'radam'}
 AVAILABLE_LR_SCHED = {'reduce', 'cos_res', 'cos'}
-AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl', 'lc', 'slc'}
+AVAILABLE_LOSSES = {'mse', 'l1', 'huber', 'smooth_l1', 'mare', 'mard', 'msl', 'smsl', 'lc', 'slc', 'smae', 'stmae'}
+
+AVAILABLE_GRAD = {'norm', 'value', 'noise'}
 
 
 def correlation_factor(prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -78,6 +81,41 @@ class ScaleLogCoshLoss(torch.nn.Module):
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         return ((1 + target.abs() / 3) * torch.log(torch.cosh(prediction - target))).mean()
+
+
+class SMAE(torch.nn.Module):
+    def __init__(self):
+        super(SMAE, self).__init__()
+
+    def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        return ((prediction - target).abs() * torch.tanh((prediction - target).abs() / 2)).mean()
+
+
+class GradientNoise(torch.nn.Module):
+    def __init__(self, min_norm: float):
+        super(GradientNoise, self).__init__()
+        self.min_norm = min_norm
+
+    def forward(self, parameters: Generator) -> None:
+        for param in parameters:
+            if param.requires_grad:
+                if (param.grad is not None) and (param.grad.norm() < self.min_norm):
+                    noise = torch.normal(mean=0.0, std=1e-5, size=param.grad.size(), device=param.grad.device,
+                                         dtype=param.grad.dtype)
+                    param.grad.add_(noise)
+
+
+def gradient_algorithm(algorithm: str, val: float = 1.0) -> Callable:
+    assert algorithm.lower() in AVAILABLE_GRAD, NotImplementedError(
+        f"Choose one of {AVAILABLE_GRAD} as gradient clipping algorithms.")
+    assert val > 0.0, ValueError("Gradient  value must be positive.")
+
+    if algorithm == 'norm':
+        return partial(torch.nn.utils.clip_grad_norm_, max_norm=val)
+    elif algorithm == 'value':
+        return partial(torch.nn.utils.clip_grad_value_, clip_value=val)
+    elif algorithm == 'noise':
+        return GradientNoise(val)
 
 
 def get_loss(loss: str) -> torch.nn.Module:
