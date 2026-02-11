@@ -15,6 +15,33 @@ def parse_dict(d: str) -> Optional[dict]:
         return json.loads(d.replace("'", '"'))
 
 
+def run_jason_experiment(**kwargs):
+    if 'device' in kwargs.keys():
+        if kwargs['device'] == 'cuda':
+            from multiprocessing import set_start_method
+            try:
+                set_start_method('spawn')
+            except RuntimeError:
+                pass
+            torch.cuda.empty_cache()
+            torch.set_float32_matmul_precision('high')
+            torch.backends.cudnn.benchmark = True
+    else:
+        from multiprocessing import set_start_method
+        try:
+            set_start_method('spawn')
+        except RuntimeError:
+            pass
+        torch.cuda.empty_cache()
+        torch.set_float32_matmul_precision('high')
+        torch.backends.cudnn.benchmark = True
+
+    if 'dtype' in kwargs.keys():
+        kwargs['dtype'] = torch.float32 if '32' in kwargs['dtype'] else torch.float64
+
+    run_experiments.run_experiment(**kwargs)
+
+
 def parse_to_generate(parsed_args):
     generate_datasets(parsed_args.experiment, parsed_args.n_elements, parsed_args.dim,
                       parsed_args.generate_n_train, parsed_args.generate_n_val, parsed_args.generate_n_test,
@@ -57,6 +84,13 @@ def parser_def():
     parser = argparse.ArgumentParser(prog='experiments',
                                      description='Run experiments for different ansatzes on various tasks. Make sure to generate data prioraly.',
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
+
+    parser.add_argument('--use_json', action='store_true',
+                        help='If set, load experiment configuration from path instead of command-line arguments.')
+    parser.add_argument('--json_config_path', type=str, required=False,
+                        default='experiments/configs/det_10_config.json',
+                        help='Path to the JSON configuration file to load if --use_json is set.')
+
     parser.add_argument('--experiment', type=str, required=False, default='determinant',
                         help='Name of the experiment to run. Must be in EXPERIMENTS ("determinant", "norm_cross_product_discontinuity", "cross_product").')
     parser.add_argument('--n_elements', type=int, required=False, default=10, help='Number of elements in the input.')
@@ -182,7 +216,12 @@ def main():
                          n_elements=parsed_args.n_elements,
                          dim=parsed_args.dim)
         else:
-            parse_to_experiment(parsed_args)
+            if parsed_args.use_json:
+                with open(parsed_args.json_config_path, 'rb') as f:
+                    json_args = json.load(f)
+                run_jason_experiment(**json_args)
+            else:
+                parse_to_experiment(parsed_args)
 
 
 if __name__ == '__main__':
