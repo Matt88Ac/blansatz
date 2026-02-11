@@ -15,7 +15,7 @@ def parse_dict(d: str) -> Optional[dict]:
         return json.loads(d.replace("'", '"'))
 
 
-def run_jason_experiment(**kwargs):
+def run_jason_experiment(resume_version: int, **kwargs):
     if 'device' in kwargs.keys():
         if kwargs['device'] == 'cuda':
             from multiprocessing import set_start_method
@@ -39,6 +39,7 @@ def run_jason_experiment(**kwargs):
     if 'dtype' in kwargs.keys():
         kwargs['dtype'] = torch.float32 if '32' in kwargs['dtype'] else torch.float64
 
+    kwargs['resume_version'] = resume_version
     run_experiments.run_experiment(**kwargs)
 
 
@@ -219,7 +220,7 @@ def main():
             if parsed_args.use_json:
                 with open(parsed_args.json_config_path, 'rb') as f:
                     json_args = json.load(f)
-                run_jason_experiment(**json_args)
+                run_jason_experiment(parsed_args.resume_version, **json_args)
             else:
                 parse_to_experiment(parsed_args)
 
