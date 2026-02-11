@@ -90,7 +90,7 @@ class SMAE(torch.nn.Module):
         self.eps = 1e-10
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        return self.l1(prediction, target) / (target.mean().abs() + self.eps)
+        return self.l1(prediction, target) / (target.abs().mean() + self.eps)
 
 
 class GradientNoise(torch.nn.Module):
