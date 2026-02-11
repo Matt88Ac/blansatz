@@ -78,13 +78,9 @@ def linear_wsop_sub_weights(X: torch.Tensor) -> torch.Tensor:
         Args:
             X (torch.Tensor):
                 A real tensor X of shape [b, d_1, ..., d_k, n]
-            offset (float):
-                A real number that offsets the sub-weights
-            scale (float):
-                A real number that scales the sub-weights
         Returns (torch.Tensor):
                 A real tensor of shape [b, d_1, ..., d_k, n],
-                where on the last axis, at each element i, scale * (1/x_i) / (offset + sum(1/x_j, 1 <= j <= n))
+                where on the last axis, at each element i, 0.5 * (1/x_i) / (1 + sum(1/x_j, 1 <= j <= n))
             """
 
     is_zero = torch.isclose(X, torch.zeros_like(X))
