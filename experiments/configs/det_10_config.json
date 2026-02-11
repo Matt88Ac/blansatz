@@ -1,0 +1,23 @@
+{
+"experiment": "determinant",
+"n_elements": 10,
+"dim": 10,
+"ansatz_name": "afanet",
+"device": "cuda",
+"n_workers": 2,
+"persistent_workers": true,
+"model_name": "mlp",
+"an_invariant": false,
+"frame_name": "linear",
+"hidden_layers": [140, 140, 140 , 140],
+"activation": "leakyrelu",
+"biases": true,
+"flatten": true,
+"batch_size": 256,
+"optimizer_kwargs": {"optimizer": "adam", "lr": 1e-4},
+"loss": "slc",
+"extra_metrics": ["mare", "l1"],
+"max_epochs": 1000,
+"corr_factor": true,
+  "dtype": "float64"
+}
