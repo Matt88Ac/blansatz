@@ -86,9 +86,11 @@ class ScaleLogCoshLoss(torch.nn.Module):
 class SMAE(torch.nn.Module):
     def __init__(self):
         super(SMAE, self).__init__()
+        self.l1 = torch.nn.L1Loss()
+        self.eps = 1e-10
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        return ((prediction - target).abs() * torch.tanh((prediction - target).abs() / 2)).mean()
+        return self.l1(prediction, target) / (target.mean().abs() + self.eps)
 
 
 class GradientNoise(torch.nn.Module):
@@ -142,6 +144,8 @@ def get_loss(loss: str) -> torch.nn.Module:
         return LogCoshLoss()
     elif loss.lower() == 'slc':
         return ScaleLogCoshLoss()
+    elif loss.lower() == 'smae':
+        return SMAE()
 
 
 def get_optimizer(optimizer: str, *args, **kwargs) -> partial:
