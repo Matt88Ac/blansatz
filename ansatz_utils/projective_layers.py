@@ -91,6 +91,10 @@ class ProjectiveSorting(nn.Module):
     def embedding_dim(self):
         return self.spatial_projector.out_features
 
+    @property
+    def in_dim(self):
+        return self.spatial_projector.in_features
+
 
 class AnInvariantEmbedding(nn.Module):
     """ 
