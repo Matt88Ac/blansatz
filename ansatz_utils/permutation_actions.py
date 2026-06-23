@@ -35,6 +35,12 @@ def permutation_sign(p: torch.Tensor) -> torch.Tensor:
     sign = torch.tensor(- 2 * ((dim - count) % 2) + 1, device=p.device, dtype=torch.int8)
     return sign
 
+def permute_ij(x: torch.Tensor, i: int, j: int) -> torch.Tensor:
+    t = x[..., i].clone()
+    x[..., i] = x[..., j].clone()
+    x[..., j] = t
+    return x
+
 
 def all_transpositions(n: int, device: Optional[Union[str, torch.device]] = 'cpu') -> torch.Tensor:
     indices = [list(range(n))] * (n - 1)
