@@ -208,6 +208,9 @@ def parser_def():
 
 def main():
     parsed_args = parser_def()
+    print(parsed_args)
+    exit(0)
+
     if parsed_args.run_generate_datasets:
         parse_to_generate(parsed_args)
 
