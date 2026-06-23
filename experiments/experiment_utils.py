@@ -108,7 +108,7 @@ class GradientNoise(torch.nn.Module):
 
 def gradient_algorithm(algorithm: str, val: float = 1.0) -> Callable:
     assert algorithm.lower() in AVAILABLE_GRAD, NotImplementedError(
-        f"Choose one of {AVAILABLE_GRAD} as gradient clipping algorithms.")
+        f"Choose one of {AVAILABLE_GRAD} as gradient clipping algorithms, instead of {algorithm}.")
     assert val > 0.0, ValueError("Gradient  value must be positive.")
 
     if algorithm == 'norm':
