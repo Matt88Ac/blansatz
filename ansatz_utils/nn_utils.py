@@ -73,35 +73,22 @@ def uniform_sphere_sampling(n_samples: int, dim: int) -> torch.Tensor:
 
 # @torch.jit.script
 # @torch.compile(fullgraph=True, dynamic=True)
-def linear_wsop_sub_weights(X: torch.Tensor) -> torch.Tensor:
-    """
-        Args:
-            X (torch.Tensor):
-                A real tensor X of shape [b, d_1, ..., d_k, n]
-        Returns (torch.Tensor):
-                A real tensor of shape [b, d_1, ..., d_k, n],
-                where on the last axis, at each element i, 0.5 * (1/x_i) / (1 + sum(1/x_j, 1 <= j <= n))
-            """
+# def linear_wsop_sub_weights(x: torch.Tensor, pdist: torch.Tensor) -> torch.Tensor:
+#     """
+#         Args:
+#             x (torch.Tensor):
+#                 A real tensor x of shape [b, d_1, ..., d_k, n]
+#         Returns (torch.Tensor):
+#                 A real tensor of shape [b, d_1, ..., d_k, n],
+#                 where on the last axis, at each element i, 0.5 * (1/x_i) / (1 + sum(1/x_j, 1 <= j <= n))
+#     """
+#     B, I, J = torch.nonzero(pdist, as_tuple=True)
+#
+#     print(B)
+#     print(I)
+#     print(J)
 
-    is_zero = torch.isclose(X, torch.zeros_like(X))
 
-    zero_count = is_zero.sum(dim=-1, keepdim=True)
-    zero_count = torch.where(zero_count > 0, 1 / zero_count, zero_count) + torch.zeros_like(X)
-    # zero_count = is_zero * zero_count
-
-    out = torch.where(
-        torch.logical_and(zero_count > 0, is_zero > 0),
-        zero_count,
-        torch.zeros_like(X)
-    )
-
-    out = torch.where(
-        zero_count == 0,
-        (1 / X) / (1 + torch.sum(1 / X, dim=-1, keepdim=True)),
-        out
-    ).nan_to_num(0.0, 0.0, 0.0) / 2
-
-    return out
 
 
 if __name__ == '__main__':
@@ -120,14 +107,14 @@ if __name__ == '__main__':
         return shaped_input, trans_input
 
 
-    x = torch.rand(1, 5, 30, device='cuda')
-    x[:, :, 3] = x[:, :, 2]
+    X = torch.rand(1, 5, 30, device='cuda')
+    X[:, :, 3] = X[:, :, 2]
 
-    xs, xt = make_transpositions(x.transpose(-2, -1))
+    xs, xt = make_transpositions(X.transpose(-2, -1))
 
     xx = (xs - xt).norm(dim=(-2, -1))
 
-    print(linear_wsop_sub_weights(xx))
+    # print(linear_wsop_sub_weights(xx))
 
     # b, k, n = 10, 8, 13
     # temp = torch.rand(b, k, n, device='cpu', dtype=torch.float64, requires_grad=True) * 100 + 7
