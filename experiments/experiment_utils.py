@@ -23,7 +23,7 @@ class MeanAbsoluteRelativeError(torch.nn.Module):
 
     def __init__(self):
         super(MeanAbsoluteRelativeError, self).__init__()
-        self.eps = 1e-10
+        self.eps = 1e-30
 
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         if target.dim() > 1:
