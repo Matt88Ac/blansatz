@@ -90,7 +90,7 @@ class SMAE(torch.nn.Module):
     def forward(self, prediction: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         diff = (prediction.flatten() - target.flatten()) ** 2
         w = torch.nn.functional.softmax(target.flatten().abs(), dim=-1)
-        return torch.sqrt((w * diff).sum())
+        return (w * diff).sum()
 
 
 class GradientNoise(torch.nn.Module):
