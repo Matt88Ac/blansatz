@@ -72,16 +72,7 @@ class ProjectiveSorting(nn.Module):
         else:
             permutations = torch.argsort(projected_x, stable=True, dim=-1)
             # permutations = vectorized_permutation_sign(permutations)
-            return diff_proj_x, torch.take_along_dim(x.unsqueeze(1), permutations.unsqueeze(-2), -1)
-        # sorted_proj_x, permutations = torch.sort(
-        #     nn.functional.linear(x.swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1),
-        #     stable=True, dim=-1
-        # )
-        # if sorted_not_proj_needed:
-        #     return (sorted_proj_x,
-        #             vectorized_permutation_sign(permutations).unsqueeze(-1) * alternation_separation(sorted_proj_x))
-        # else:
-        #     return alternation_separation(sorted_proj_x), permutations
+            return diff_proj_x, permutations
 
     @property
     def weights(self):
