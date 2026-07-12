@@ -6,7 +6,7 @@ from tqdm import tqdm
 from .cross_product import multi_cross, cross_scale
 from .determinant import det, det_scale
 from .norm_cross_product_discontinuity import discontinuous_multi_cross
-from .sin_vdet import sin_vdet
+from .svdet import sin_vdet
 
 EXPERIMENTS = {
     'determinant': (det, det_scale),
