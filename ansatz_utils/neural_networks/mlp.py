@@ -26,13 +26,18 @@ class AffineBlock(nn.Module):
             self.norm = nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine,
                                      device=device, dtype=dtype)
 
-        nn.init.xavier_uniform_(self.layer.weight, gain=nn.init.calculate_gain('leaky_relu', activation_constant))
+        # nn.init.xavier_uniform_(self.layer.weight, gain=nn.init.calculate_gain('leaky_relu', activation_constant))
+        self.reset_parameters()
         self.dropout = None
 
         if dropout_p > 0:
             self.dropout = DropoutEquivariant(out_dim, dropout_p).to(device=device, dtype=dtype)
 
         self.res = res and ((in_dim == out_dim) or in_dim == 1)
+
+    @torch.no_grad()
+    def reset_parameters(self):
+        nn.init.normal_(self.layer.weight, std=self.out_dim/self.in_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.layer(x)
@@ -53,6 +58,14 @@ class AffineBlock(nn.Module):
         if self.dropout is None:
             return
         self.dropout.reset_parameters()
+
+    @property
+    def in_dim(self):
+        return self.layer.in_features
+
+    @property
+    def out_dim(self):
+        return self.layer.out_features
 
 
 class MLP(nn.Module):
