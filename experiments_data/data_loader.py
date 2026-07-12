@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from ansatz_utils import random_negative_permutation, random_positive_permutation
 
-EXPERIMENTS = {'determinant', 'cross_product', 'norm_cross_product_discontinuity'}
+EXPERIMENTS = {'determinant', 'cross_product', 'norm_cross_product_discontinuity', 'svdet'}
 
 
 def dataset_collector(batch: list[torch.Tensor, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:

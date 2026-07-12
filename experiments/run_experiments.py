@@ -91,7 +91,7 @@ def run_experiment(experiment: str, n_elements: int, dim: int, ansatz_name: str,
     """
     assert ansatz_name in ANSATZES.keys()
     assert experiment in EXPERIMENTS
-    out_dim = 1 if experiment in ['determinant', 'norm_cross_product_discontinuity'] else 3
+    out_dim = 1 if experiment in ['determinant', 'svdet', 'norm_cross_product_discontinuity'] else 3
 
     # print(torch._inductor.list_options())
 

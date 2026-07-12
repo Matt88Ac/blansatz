@@ -1,17 +1,18 @@
 import os
 
 import numpy as np
-from scipy.stats import norm
 from tqdm import tqdm
 
 from .cross_product import multi_cross, cross_scale
 from .determinant import det, det_scale
 from .norm_cross_product_discontinuity import discontinuous_multi_cross
+from .sin_vdet import sin_vdet
 
 EXPERIMENTS = {
     'determinant': (det, det_scale),
     'cross_product': (multi_cross, cross_scale),
-    'norm_cross_product_discontinuity': (discontinuous_multi_cross, cross_scale)
+    'norm_cross_product_discontinuity': (discontinuous_multi_cross, cross_scale),
+    'svdet': (sin_vdet, None),
 }
 
 
@@ -38,7 +39,6 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
 
     PATH = os.path.dirname(__file__) + f'{os.sep}{experiment}{os.sep}data{os.sep}'
     exp_func = EXPERIMENTS[experiment][0]
-    scale_func = EXPERIMENTS[experiment][1]
 
     if not os.path.exists(PATH + f'{n_elements}_{dim}'):
         os.mkdir(PATH + f'{n_elements}_{dim}')
@@ -53,9 +53,6 @@ def generate_datasets(experiment: str, n_elements: int, dim: int,
         batch_size = batch_size if batch_size <= count else count
         sub_count = batch_size
         size = batch_size
-
-        max_val = 0
-        min_val = 0
 
         iter_number = count // batch_size
         if iter_number * batch_size > count:
