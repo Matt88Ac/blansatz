@@ -12,7 +12,7 @@ EXPERIMENTS = {
     'determinant': (det, det_scale),
     'cross_product': (multi_cross, cross_scale),
     'norm_cross_product_discontinuity': (discontinuous_multi_cross, cross_scale),
-    'svdet': (sin_vdet, None),
+    'svdet': (sin_vdet(), None),
 }
 
 
