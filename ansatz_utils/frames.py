@@ -264,7 +264,7 @@ class LinearWeightedFrame(WeakStabilizeWeightedFrame):
         super(LinearWeightedFrame, self).__init__(unstable_function, in_dim, in_channels, n_frames, an_invariant,
                                                   device, dtype, *args, **kwargs)
 
-        self.delta = nn.Parameter(torch.rand(1, device=device, dtype=dtype), requires_grad=True)
+        self.delta = nn.Parameter(torch.rand(1, device=device, dtype=dtype), requires_grad=False)
 
     def stable_forward(self, x: Tensor, permutations: Tensor = None) -> Tensor:
         """
