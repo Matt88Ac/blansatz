@@ -118,6 +118,8 @@ def gradient_algorithm(algorithm: str, val: float = 1.0) -> Callable:
         return partial(torch.nn.utils.clip_grad_value_, clip_value=val)
     elif algorithm == 'noise':
         return GradientNoise(val)
+    else:
+        raise NotImplementedError(f"Gradient algorithm {algorithm} not recognized.")
 
 
 def get_loss(loss: str) -> torch.nn.Module:
@@ -146,6 +148,8 @@ def get_loss(loss: str) -> torch.nn.Module:
         return ScaleLogCoshLoss()
     elif loss.lower() == 'smae':
         return SMAE()
+    else:
+        raise NotImplementedError(f"Loss function {loss} not recognized.")
 
 
 def get_optimizer(optimizer: str, *args, **kwargs) -> partial:
@@ -188,9 +192,10 @@ def get_lr_scheduler(lr_scheduler: AVAILABLE_LR_SCHED, *args, **kwargs) -> parti
         return partial(CosineAnnealingWarmRestarts, *args, **kwargs)
     elif lr_scheduler.lower() == 'cos':
         return partial(CosineAnnealingLR, *args, **kwargs)
-
     elif lr_scheduler.lower() == 'exp':
         return partial(ExponentialLR, *args, **kwargs)
+    else:
+        raise NotImplementedError(f'LR scheduler {lr_scheduler} not recognized. Choose one of {AVAILABLE_LR_SCHED}.')
 
 
 def get_dtype(dtype: str) -> torch.dtype:
@@ -202,3 +207,6 @@ def get_dtype(dtype: str) -> torch.dtype:
 
     elif '16' in dtype:
         return torch.float16
+
+    else:
+        raise NameError(f"Dtype {dtype} not recognized.")
