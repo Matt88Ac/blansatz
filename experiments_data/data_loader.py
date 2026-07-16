@@ -2,6 +2,8 @@ import os
 from glob import glob
 from typing import Literal
 
+from math import log, exp
+
 import numpy as np
 import torch
 from pytorch_lightning import LightningDataModule
@@ -24,8 +26,7 @@ def dataset_collector(batch: list[torch.Tensor, torch.Tensor]) -> tuple[torch.Te
 
 
 class CutOffTransform(torch.nn.Module):
-    def __init__(self, n_elements: int, dim: int, cutoff_value: float = 100.0,
-                 device=torch.device('cuda'), dtype=torch.float64):
+    def __init__(self, n_elements: int, dim: int, cutoff_value: float = 100.0):
         super(CutOffTransform, self).__init__()
 
         assert cutoff_value > 0
@@ -34,17 +35,9 @@ class CutOffTransform(torch.nn.Module):
         self.dim = dim
         self.cutoff_value = cutoff_value
 
-        self.normal = torch.distributions.HalfNormal(torch.tensor([cutoff_value / 2], device=device, dtype=dtype))
-
     def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        cond = torch.any(target.abs() > self.cutoff_value, dim=-1, keepdim=True)
-
-        scale = self.normal.sample()
-        scale = scale / target.abs().max(dim=-1, keepdim=True)[0]
-
-        target = torch.where(cond, target * scale, target)
-        feature_matrix = torch.where(cond[..., None], feature_matrix * torch.pow(scale[..., None], 1 / self.n_elements),
-                                     feature_matrix)
+        target = target * self.cutoff_value
+        feature_matrix = feature_matrix * log(exp(self.cutoff_value)/self.dim)
 
         return feature_matrix, target
 
@@ -78,7 +71,7 @@ class ExperimentDataset(Dataset):
         self.transform = None
 
         if cutoff:
-            self.transform = CutOffTransform(n_elements, dim, device=device, dtype=dtype, cutoff_value=cutoff_value)
+            self.transform = CutOffTransform(n_elements, dim, cutoff_value=cutoff_value)
 
     def pin_memory(self):
         self.pin = True
