@@ -14,7 +14,7 @@ class AbsTransform(torch.nn.Module):
         super(AbsTransform, self).__init__()
 
     def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        positive = (target > 0).squeeze()
+        positive = (target > 0).squeeze().unsqueeze(-1).unsqueeze(-1)
         feature_matrix = torch.where(positive, feature_matrix, permute_ij(feature_matrix, 0, 1))
         return feature_matrix, target.abs()
 
