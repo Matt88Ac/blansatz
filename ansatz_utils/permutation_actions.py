@@ -38,7 +38,7 @@ def permutation_sign(p: torch.Tensor) -> torch.Tensor:
 def permute_ij(x: torch.Tensor, i: int, j: int) -> torch.Tensor:
     t = x[..., i].clone()
     x[..., i] = x[..., j].clone()
-    x[..., j] = t
+    x[..., j] = t.clone()
     return x
 
 

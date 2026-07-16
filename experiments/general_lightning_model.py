@@ -3,7 +3,7 @@ from typing import Optional, Iterable
 import torch
 from pytorch_lightning import LightningModule
 
-from ansatz_utils import get_model
+from ansatz_utils import get_model, permute_ij
 from ansatzes import AfaNetModel, BiLipschitzAntiSymmetricModel, OnVandermondeModel
 from experiments import (get_loss, get_optimizer, get_lr_scheduler, correlation_factor, gradient_algorithm,
                          AVAILABLE_GRAD)
@@ -16,11 +16,8 @@ class AbsTransform(torch.nn.Module):
     def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         positive = (target > 0).squeeze()
 
-        x0 = torch.where(positive, feature_matrix[..., 0].clone(), feature_matrix[..., 1].clone())
-        x1 = torch.where(positive, feature_matrix[..., 1].clone(), feature_matrix[..., 0].clone())
+        feature_matrix = torch.where(positive, feature_matrix, permute_ij(feature_matrix, 0, 1))
 
-        feature_matrix[..., 0] = x0.clone()
-        feature_matrix[..., 1] = x1.clone()
         return feature_matrix, target.abs()
 
 
