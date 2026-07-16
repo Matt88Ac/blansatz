@@ -26,7 +26,6 @@ class AffineBlock(nn.Module):
             self.norm = nn.LayerNorm(out_dim, bias=bias, elementwise_affine=elementwise_affine,
                                      device=device, dtype=dtype)
 
-        # nn.init.xavier_uniform_(self.layer.weight, gain=nn.init.calculate_gain('leaky_relu', activation_constant))
         self.reset_parameters()
         self.dropout = None
 
@@ -37,7 +36,9 @@ class AffineBlock(nn.Module):
 
     @torch.no_grad()
     def reset_parameters(self):
-        nn.init.normal_(self.layer.weight, std=self.out_dim/self.in_dim)
+        # nn.init.normal_(self.layer.weight, std=self.out_dim/self.in_dim)
+        nn.init.xavier_uniform_(self.layer.weight, gain=nn.init.calculate_gain('leaky_relu', 0.1))
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.layer(x)
