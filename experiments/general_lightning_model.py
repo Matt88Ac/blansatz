@@ -9,30 +9,20 @@ from experiments import (get_loss, get_optimizer, get_lr_scheduler, correlation_
                          AVAILABLE_GRAD)
 
 
-class UniformTransform(torch.nn.Module):
-    def __init__(self, n_elements: int, dim: int, cutoff_value: float = 100.0,
-                 device=torch.device('cuda'), dtype=torch.float64):
-        super(UniformTransform, self).__init__()
-
-        assert cutoff_value > 0
-
-        self.n_elements = n_elements
-        self.dim = dim
-        self.cutoff_value = cutoff_value
-
-        self.uni = torch.distributions.Uniform(low=torch.tensor([0.0], device=device, dtype=dtype),
-                                               high=torch.tensor([float(cutoff_value)], device=device, dtype=dtype))
+class AbsTransform(torch.nn.Module):
+    def __init__(self):
+        super(AbsTransform, self).__init__()
 
     def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        norm_fx = self.uni.sample(target.shape) * target.sign()
+        positive = (target > 0).squeeze()
 
-        norm_fx = torch.where(torch.isclose(target, torch.zeros_like(target)), target, norm_fx)
+        x0 = torch.where(positive, feature_matrix[..., 0].clone(), feature_matrix[..., 1].clone())
+        x1 = torch.where(positive, feature_matrix[..., 1].clone(), feature_matrix[..., 0].clone())
 
-        scale = torch.where(torch.isclose(target, torch.zeros_like(target)), torch.ones_like(target), norm_fx / target)
-
-        feature_matrix = feature_matrix * torch.pow(scale.unsqueeze(-1), 1 / self.n_elements)
-
-        return feature_matrix, norm_fx
+        feature_matrix[..., 0] = x0.clone()
+        feature_matrix[..., 1] = x1.clone()
+        target = torch.where(positive, target, -target)
+        return feature_matrix, target
 
 
 class GeneralTrainer(LightningModule):
@@ -157,7 +147,7 @@ class GeneralTrainer(LightningModule):
 
         self.transformation = None
         if transform:
-            self.transformation = UniformTransform(in_channels, in_dim, cutoff_value, device=device, dtype=dtype)
+            self.transformation = AbsTransform()
 
     def configure_optimizers(self):
         if not self.corr_match:
