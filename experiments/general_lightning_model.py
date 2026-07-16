@@ -21,8 +21,7 @@ class AbsTransform(torch.nn.Module):
 
         feature_matrix[..., 0] = x0.clone()
         feature_matrix[..., 1] = x1.clone()
-        target = torch.where(positive, target, -target)
-        return feature_matrix, target
+        return feature_matrix, target.abs()
 
 
 class GeneralTrainer(LightningModule):
