@@ -239,8 +239,7 @@ class GeneralTrainer(LightningModule):
         self.log('train_loss', loss, prog_bar=True)
         # self.log('train_time', time() - _t)
         with torch.no_grad():
-            self.log('train_pred_std', y_hat.std(), prog_bar=True)
-            self.log('train_target_std', y.std(), prog_bar=True)
+            self.log('train_pred_std', y_hat.std() - y.std(), prog_bar=True)
             for metric in self.extra_metrics_names:
                 self.log(f'train_{metric}', self.extra_metrics[metric](y_hat, y), prog_bar=True)
         return loss
