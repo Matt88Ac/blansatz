@@ -2,8 +2,6 @@ import os
 from glob import glob
 from typing import Literal
 
-from math import log, exp
-
 import numpy as np
 import torch
 from pytorch_lightning import LightningDataModule
@@ -37,7 +35,7 @@ class CutOffTransform(torch.nn.Module):
 
     def forward(self, feature_matrix: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         target = target * self.cutoff_value
-        feature_matrix = feature_matrix * log(exp(self.cutoff_value)/self.dim)
+        feature_matrix = feature_matrix * (self.cutoff_value ** (1 / self.dim))
 
         return feature_matrix, target
 
