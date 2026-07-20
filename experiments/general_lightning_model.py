@@ -185,8 +185,6 @@ class GeneralTrainer(LightningModule):
     def training_step(self, batch, batch_idx):
         X, y = batch
         X, y = self.transform_target(X, y)
-        print(y)
-        exit(0)
         # _t = time()
         y_hat = self.forward(X).squeeze()
         y = y.squeeze()
