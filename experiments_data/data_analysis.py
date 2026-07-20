@@ -1,8 +1,7 @@
 import os
+from glob import glob
 
 import numpy as np
-from glob import glob
-import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 from tqdm import tqdm
@@ -19,6 +18,7 @@ def load_all_results(PATH: str, experiment: str) -> np.ndarray:
 def plot_stats(data: np.ndarray) -> None:
     count = len(data)
     n, d = data.shape
+    data = np.abs(data)
     if d == 1:
         min = data.min()
         max = data.max()

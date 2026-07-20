@@ -1,10 +1,6 @@
 import numpy as np
 from numpy import linalg as la
 
-def uniform_sphere_sampling(n_group: int, n_samples: int, dim: int) -> np.ndarray:
-    samples = np.random.normal(size=(n_group, n_samples, dim))
-    return samples / la.norm(samples, ord=2, axis=-1, keepdims=True)
-
 
 def all_diff(x: np.ndarray) -> np.ndarray:
     *b, n = x.shape
@@ -19,7 +15,7 @@ class sin_vdet:
     def __init__(self):
         self.n_samples = None
         self.dim = None
-        self.n_vad = 1
+        self.n_vad = 10
         self.coefficients = None
         self.projections = None
 
@@ -29,14 +25,14 @@ class sin_vdet:
             self.dim = d
             self.n_samples = 2 * n * d + 1
             self.coefficients = np.random.uniform(1.0, n, self.n_vad)
-            self.projections = uniform_sphere_sampling(self.n_vad, self.n_samples, self.dim)
+            self.projections = np.random.normal(size=(self.n_vad, self.n_samples, self.dim))
 
         elif (self.dim != d) or (self.n_samples != 2 * n * d + 1):
             print("The dimension of the input data has changed. Reinitializing the coefficients.")
             self.dim = d
             self.n_samples = 2 * n * d + 1
-            self.coefficients = np.random.uniform(1.0, n, self.n_vad)
-            self.projections = uniform_sphere_sampling(self.n_vad, self.n_samples, self.dim)
+            self.coefficients = np.random.uniform(-n, n, self.n_vad)
+            self.projections = np.random.normal(size=(self.n_vad, self.n_samples, self.dim))
 
         return
 

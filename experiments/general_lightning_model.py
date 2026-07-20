@@ -39,7 +39,6 @@ class GeneralTrainer(LightningModule):
         gradient_clip_algorithm (str, optional): Algorithm for gradient clipping (one of {AVAILABLE_GRAD}). Defaults to 'norm'.
         accumulate_grad_batches (int, optional): Number of batches to accumulate gradients over. Defaults to 1.
         transform (bool, optional): Whether to apply target-uniforming transform to the input. Defaults to False.
-        cutoff_value (float, optional): The cutoff value for scaling outputs. Defaults to 100.0.
         corr_factor (bool, optional): Whether to use correlation factor in the loss computation. Defaults to False.
         corr_match (bool, optional): Whether to use correlation matching in the optimization. Defaults to False.
         corr_optimizer_kwargs (dict, optional): Dictionary of optimizer parameters for correlation matching. Defaults to None.
@@ -70,7 +69,6 @@ class GeneralTrainer(LightningModule):
                  gradient_clip_algorithm: Optional[str] = 'norm',
                  accumulate_grad_batches: Optional[int] = 1,
                  transform: Optional[bool] = False,
-                 cutoff_value: Optional[float] = 100.0,
                  corr_factor: Optional[bool] = False,
                  corr_match: Optional[bool] = False,
                  corr_optimizer_kwargs: Optional[dict] = None,
@@ -187,6 +185,8 @@ class GeneralTrainer(LightningModule):
     def training_step(self, batch, batch_idx):
         X, y = batch
         X, y = self.transform_target(X, y)
+        print(y)
+        exit(0)
         # _t = time()
         y_hat = self.forward(X).squeeze()
         y = y.squeeze()
