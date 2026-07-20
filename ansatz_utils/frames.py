@@ -6,7 +6,7 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from ansatz_utils import all_transpositions, ProjectiveSorting, random_transposition, permute_ij
+from ansatz_utils import all_transpositions, ProjectiveSorting, permute_ij
 
 
 class AsWeightedFrame(nn.Module):
@@ -400,7 +400,6 @@ class SoftNonLinearWeightedFrame(WeakStabilizeWeightedFrame):
 
 if __name__ == '__main__':
     from neural_networks import MLP
-    from projective_layers import AnInvariantEmbedding
 
     b, d, n = 10, 3, 5
     print(f"b = {b}, d = {d}, n = {n}")
