@@ -46,26 +46,28 @@ class ProjectiveSorting(nn.Module):
 
     def __init__(self, in_dim: int, projection_dim: int):
         super(ProjectiveSorting, self).__init__()
-        self.spatial_projector = nn.Linear(in_dim, projection_dim, bias=False)
-
+        self.spatial_projector = nn.Parameter(torch.empty(projection_dim, in_dim), requires_grad=False)
         self.reset_parameters()
 
     @torch.no_grad()
     def reset_parameters(self):
-        nn.init.xavier_uniform_(self.spatial_projector.weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.xavier_uniform_(self.spatial_projector, gain=nn.init.calculate_gain('relu'))
+        while torch.linalg.matrix_rank(self.spatial_projector) != self.in_dim:
+            nn.init.xavier_uniform_(self.spatial_projector, gain=nn.init.calculate_gain('relu'))
+
 
     def forward(self, x: Tensor, sorted_not_proj_needed: bool) -> Tuple[Tensor, Tensor]:
         """
         Args:
             x (Tensor): a tensor of shape [b, d, n] or [d, n].
-            sorted_not_proj_needed (bool):  If true,
+            sorted_not_proj_needed (bool): If true,
 
         Returns: the following three tensors:
             - diff_proj_x: tensor of shape [b, m, n*(n-1)/2] or [m, n*(n-1)/2] containing all differences a*(X_j - X_i): i < j for each projecting vector a.
             - sorted_proj_x: tensor of shape [b, m, n] or [m, n] of the projections a*X sorted along the last axis.
             - out_x: tensor of shape [b, m, n] or [m, n] containing the input x permuted according to the sorting of the projections a*X.
         """
-        projected_x = self.spatial_projector(x.swapaxes(-2, -1)).swapaxes(-2, -1)
+        projected_x = nn.functional.linear(x.swapaxes(-2, -1), self.spatial_projector).swapaxes(-2, -1)
         diff_proj_x = AllDifferences.apply(projected_x)
         if sorted_not_proj_needed:
             return diff_proj_x, torch.sort(projected_x, stable=True, dim=-1)[0]
@@ -76,15 +78,15 @@ class ProjectiveSorting(nn.Module):
 
     @property
     def weights(self):
-        return self.spatial_projector.weight
+        return self.spatial_projector
 
     @property
     def embedding_dim(self):
-        return self.spatial_projector.out_features
+        return self.spatial_projector.shape[0]
 
     @property
     def in_dim(self):
-        return self.spatial_projector.in_features
+        return self.spatial_projector.shape[-1]
 
 
 class AnInvariantEmbedding(nn.Module):
@@ -146,7 +148,7 @@ if __name__ == '__main__':
     X = torch.rand(b, d, n)
 
     p_l = AnInvariantEmbedding(d, n, 120)
-
+    
     for i in range(100):
         rand_x = X[..., random_positive_permutation(n)]
         assert torch.allclose(p_l(X), p_l(rand_x))
